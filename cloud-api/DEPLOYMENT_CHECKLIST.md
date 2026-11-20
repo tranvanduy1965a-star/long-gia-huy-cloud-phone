@@ -23,6 +23,14 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 - Mount the licensed Alibaba SDK directory read-only at `/app/cloud-sdk` in the container. The Docker build intentionally excludes vendor SDK assets.
 - The image runs as the unprivileged `node` user and includes a `/api/health` container health check.
 - Back up the persistent database volume before upgrades. This container does not configure backups or a payment service.
+## 1B. Docker Compose deployment
+
+- Create a private deployment `.env` file from `cloud-api/.env.example`; set a unique `SESSION_SECRET` and the required Alibaba credentials. Never commit this file.
+- Put the official, licensed Alibaba Web SDK files in the local `cloud-sdk/` folder, preserving vendor subdirectories. This folder is intentionally excluded from the image build and mounted read-only at runtime.
+- From the repository root, run `docker compose up -d --build`.
+- Check startup with `docker compose ps` and `docker compose logs -f cloud-phone-api`; verify `https://your-domain/api/health` through an HTTPS reverse proxy.
+- Persistent SQLite data is stored in the named `cloudphone-data` volume. Back it up before replacing containers; do not delete the volume during routine updates.
+- The Compose file publishes the API port directly. For public production use, put it behind HTTPS and restrict direct network access to the container port.
 ## 2. Configure Alibaba Cloud credentials safely
 
 - Create/verify the Alibaba Cloud account and complete billing setup.
