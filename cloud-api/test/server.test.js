@@ -140,6 +140,8 @@ test("account, session, admin and rental API flows", async t => {
       assert.equal(protectedRoute.status, 403);
       const noToken = await request("/api/me");
       assert.equal(noToken.status, 401);
+      const malformedToken = await fetch(`${baseUrl}/api/me`, { headers: { authorization: "Bearer a.b.c" } });
+      assert.equal(malformedToken.status, 401);
     });
 
     await t.test("blocks device sessions until a rental is active", async () => {
