@@ -36,6 +36,15 @@ Ticket generation can be asynchronous. The adapter now polls
 `BatchGetAcpConnectionTicket` using its `TaskId` for a bounded period and returns
 the ticket only when Alibaba reports it ready.
 
+## Basic API protections
+
+The API applies general request throttling, stricter limits to login/registration,
+and a separate limit to connection-ticket requests. These limits use the default
+in-memory store and reset when the process restarts; configure a shared store
+such as Redis before running multiple API replicas. SQLite foreign-key enforcement
+is enabled. Ticket responses are marked private/no-store. Device assignment
+checks that the instance ID appears in the configured Alibaba Cloud inventory.
+
 ## Serve the website and SDK
 Deploy the repository with working directory `cloud-api`, build command
 `npm install`, and start command `npm start`. Use persistent disk storage
@@ -58,7 +67,7 @@ follow its redistribution terms.
 No cloud phone has been purchased or assigned in a live Alibaba account.
 Alibaba's auth-free ticket login may need to be enabled by support. Google Play,
 GMS, TikTok, browser streaming, touch, clipboard, audio/video, and Android Chrome
-compatibility still require real-device testing. Payment gateway/webhooks,
-rate limits, CSRF/origin policy, audit logs, monitoring, backups, account recovery,
+compatibility still require real-device testing. Payment gateway/webhooks, distributed rate-limit storage for multi-instance deployments,
+origin policy, audit logs, monitoring, backups, account recovery,
 concurrency controls, expiry cleanup, and data-wiping policy must be completed
 before a public paid launch. Do not advertise the service as live yet.
