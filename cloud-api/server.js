@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 import crypto from "node:crypto";
 import path from "node:path";
+import { describeCloudPhones, providerConfigured } from "./provider.js";
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -61,7 +62,7 @@ function auth(req, res, next) {
 }
 const isAdmin = user => user.role === "admin" || ADMIN_USER_IDS.has(user.id);
 app.get("/", (_req,res) => res.sendFile(path.resolve(process.cwd(), "..", "index.html")));
-app.get("/api/health", (_req,res) => res.json({ ok:true, service:"LONG GIA HUY Cloud Phone API", androidProviderConnected:false }));
+app.get("/api/health", (_req,res) => res.json({ ok:true, service:"LONG GIA HUY Cloud Phone API", androidProviderConfigured:providerConfigured(), androidProviderConnected:false }));
 app.get("/api/plans", (_req,res) => res.json({ plans: plans.map(days => ({ days, label: days + " ngày" })) }));
 
 app.post("/api/register", async (req,res) => {
@@ -91,6 +92,19 @@ app.get("/api/me", auth, (req,res) => {
   res.json({ user:{ id:req.user.id, username:req.user.username, role:admin ? "admin" : "user" }, subscription: admin ? { status:"admin_free", unlimited:true } : (sub || null) });
 });
 
+// Read-only provider check. Never returns credentials and never provisions billable resources.
+app.get("/api/admin/provider/status", auth, async (req,res) => {
+  if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin." });
+  if (!providerConfigured()) return res.status(503).json({ configured:false, connected:false, message:"Chưa cấu hình AccessKey ở phần biến môi trường bảo mật của máy chủ." });
+  try {
+    const result = await describeCloudPhones();
+    res.json({ configured:true, ...result });
+  } catch (error) {
+    console.error("Alibaba Cloud provider check failed:", error?.code || error?.name || "unknown");
+    res.status(502).json({ configured:true, connected:false, message:"Không kết nối được Alibaba Cloud. Kiểm tra quyền RAM, region và endpoint trong cấu hình máy chủ." });
+  }
+});
+
 // This endpoint is intentionally admin-only and manual until a verified payment webhook is configured.
 app.post("/api/admin/grant-plan", auth, (req,res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin mới được cấp gói." });
@@ -118,7 +132,7 @@ app.get("/api/admin/overview", auth, (req,res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin." });
   const users = db.prepare("SELECT id,username,created_at FROM users ORDER BY created_at DESC").all();
   const subscriptions = db.prepare("SELECT user_id,plan_days,expires_at,status FROM subscriptions ORDER BY expires_at DESC").all();
-  res.json({ users, subscriptions, deviceProviderConfigured:false });
+  res.json({ users, subscriptions, deviceProviderConfigured:providerConfigured() });
 });
 
 app.listen(PORT, () => console.log(`LONG GIA HUY API listening on :${PORT}`));
