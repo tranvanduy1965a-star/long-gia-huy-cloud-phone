@@ -37,6 +37,7 @@ export async function describeCloudPhones() {
   const runtime = new $Util.RuntimeOptions({});
   const instances = [];
   let nextToken;
+  const seenTokens = new Set();
   let totalCount = 0;
   // Bound pagination to avoid an accidental unbounded provider API loop.
   for (let page = 0; page < 20; page += 1) {
@@ -58,6 +59,12 @@ export async function describeCloudPhones() {
     })).filter(item => item.id));
     nextToken = body.nextToken;
     if (!nextToken) break;
+    if (seenTokens.has(nextToken)) {
+      const error = new Error("Alibaba Cloud repeated an inventory pagination token.");
+      error.code = "INVENTORY_TOKEN_REPEATED";
+      throw error;
+    }
+    seenTokens.add(nextToken);
     if (page === 19) {
       const error = new Error("Alibaba Cloud inventory exceeded the safe pagination limit.");
       error.code = "INVENTORY_PAGE_LIMIT";
