@@ -175,12 +175,21 @@ test("account, session, admin and rental API flows", async t => {
       assert.equal(grant.status, 201);
       assert.equal(grant.data.days, 7);
 
+      const renewal = await request("/api/admin/grant-plan", {
+        method: "POST",
+        token: adminToken,
+        body: { userId, days: 3 }
+      });
+      assert.equal(renewal.status, 201);
+      assert.ok(Date.parse(renewal.data.expiresAt) > Date.parse(grant.data.expiresAt));
+      assert.ok(Date.parse(renewal.data.expiresAt) - Date.parse(grant.data.expiresAt) >= 3 * 86400000 - 1000);
+
       const auditedOverview = await request("/api/admin/overview", { token: adminToken });
       assert.equal(auditedOverview.status, 200);
-      assert.equal(auditedOverview.data.auditLogs.length, 1);
+      assert.equal(auditedOverview.data.auditLogs.length, 2);
       assert.equal(auditedOverview.data.auditLogs[0].action, "grant_plan");
       assert.equal(auditedOverview.data.auditLogs[0].target_user_id, userId);
-      assert.equal(auditedOverview.data.auditLogs[0].details.days, 7);
+      assert.equal(auditedOverview.data.auditLogs[0].details.days, 3);
 
       const me = await request("/api/me", { token: adminToken });
       assert.equal(me.data.subscription.status, "admin_free");
