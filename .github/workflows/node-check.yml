@@ -37,9 +37,16 @@ jobs:
         run: |
           docker run -d --name lgh-cloudphone-ci -e SESSION_SECRET=test-only-session-secret-with-at-least-32-characters -p 3000:3000 long-gia-huy-cloud-phone:ci
           trap 'docker logs lgh-cloudphone-ci || true; docker rm -f lgh-cloudphone-ci || true' EXIT
+          ready=0
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:3000/api/health; then exit 0; fi
+            if curl --fail --silent http://127.0.0.1:3000/api/health >/tmp/lgh-health.json; then ready=1; break; fi
             sleep 2
           done
-          echo 'Container health endpoint did not become ready' >&2
-          exit 1
+          if [ "$ready" -ne 1 ]; then
+            echo 'Container health endpoint did not become ready' >&2
+            exit 1
+          fi
+          node -e "const h=require('/tmp/lgh-health.json'); if(h.ok!==true) process.exit(1)"
+          curl --fail --silent http://127.0.0.1:3000/ | grep -qi 'LONG GIA HUY'
+          curl --fail --silent http://127.0.0.1:3000/api/plans >/tmp/lgh-plans.json
+          node -e "const p=require('/tmp/lgh-plans.json').plans.map(x=>x.days); if([1,2,3,7,30].some(x=>!p.includes(x))) process.exit(1)"
