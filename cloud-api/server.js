@@ -95,6 +95,9 @@ function auth(req, res, next) {
   } catch { return res.status(401).json({ error: "Phiên không hợp lệ." }); }
 }
 const isAdmin = user => user.role === "admin" || ADMIN_USER_IDS.has(user.id);
+// Perform a same-cost hash check for unknown usernames to reduce
+// username-enumeration timing differences. The random value is never a credential.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(32).toString("hex"), 12);
 app.get("/", (_req,res) => res.sendFile(path.resolve(process.cwd(), "..", "index.html")));
 app.get("/api/health", (_req,res) => res.json({ ok:true, service:"LONG GIA HUY Cloud Phone API", androidProviderConfigured:providerConfigured(), androidProviderConnected:null }));
 app.get("/api/plans", (_req,res) => res.json({ plans: plans.map(days => ({ days, label: days + " ngày" })) }));
@@ -120,7 +123,8 @@ app.post("/api/login", authLimiter, async (req,res) => {
   const password = String(req.body?.password || "");
   if (!username || password.length > 128) return res.status(400).json({ error: "Thông tin đăng nhập không hợp lệ." });
   const user = db.prepare("SELECT * FROM users WHERE username=?").get(username);
-  if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ error: "Sai tài khoản hoặc mật khẩu." });
+  const passwordMatches = await bcrypt.compare(password, user?.password_hash || DUMMY_PASSWORD_HASH);
+  if (!user || !passwordMatches) return res.status(401).json({ error: "Sai tài khoản hoặc mật khẩu." });
   const admin = isAdmin(user);
   const token = sign({ sub:user.id, exp:Date.now() + 7*24*60*60*1000 });
   res.json({ token, user:{ id:user.id, username:user.username, role:admin ? "admin" : "user" } });
