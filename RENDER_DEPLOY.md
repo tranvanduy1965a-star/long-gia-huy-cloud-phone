@@ -1,5 +1,7 @@
 # Deploy LONG GIA HUY account portal on Render
 
+> **Mở nhanh:** [Deploy this Blueprint on Render](https://render.com/deploy?repo=https://github.com/tranvanduy1965a-star/long-gia-huy-cloud-phone). Đăng nhập, kiểm tra cấu hình và giá hiện tại trước khi bấm tạo dịch vụ. Thao tác này tạo tài nguyên tính phí nên chỉ chủ tài khoản mới xác nhận.
+
 This repository includes a Render Blueprint at `render.yaml`. It deploys the
 Node.js API and serves the website from the same HTTPS origin, so registration
 and login no longer point at GitHub Pages without a backend.
