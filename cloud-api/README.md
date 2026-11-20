@@ -48,7 +48,7 @@ and a separate limit to connection-ticket requests. These limits use the default
 in-memory store and reset when the process restarts; configure a shared store
 such as Redis before running multiple API replicas. SQLite foreign-key enforcement
 is enabled. Ticket responses are marked private/no-store. Device assignment
-checks that the instance ID appears in the configured Alibaba Cloud inventory.
+checks that the instance ID appears in the configured Alibaba Cloud inventory and a partial unique database index prevents one cloud phone from being assigned to multiple accounts.
 
 ## Serve the website and SDK
 Deploy the repository with working directory `cloud-api`, build command
