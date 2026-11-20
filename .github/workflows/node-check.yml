@@ -31,3 +31,5 @@ jobs:
       - name: Run provider safety tests
         working-directory: cloud-api
         run: npm test
+      - name: Build production Docker image
+        run: docker build -f cloud-api/Dockerfile -t long-gia-huy-cloud-phone:ci .
