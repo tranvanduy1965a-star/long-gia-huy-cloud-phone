@@ -33,3 +33,13 @@ jobs:
         run: npm test
       - name: Build production Docker image
         run: docker build -f cloud-api/Dockerfile -t long-gia-huy-cloud-phone:ci .
+      - name: Smoke-test production Docker container
+        run: |
+          docker run -d --name lgh-cloudphone-ci -e SESSION_SECRET=test-only-session-secret-with-at-least-32-characters -p 3000:3000 long-gia-huy-cloud-phone:ci
+          trap 'docker logs lgh-cloudphone-ci || true; docker rm -f lgh-cloudphone-ci || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/api/health; then exit 0; fi
+            sleep 2
+          done
+          echo 'Container health endpoint did not become ready' >&2
+          exit 1
