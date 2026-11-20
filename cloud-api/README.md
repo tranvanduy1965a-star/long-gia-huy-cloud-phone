@@ -14,7 +14,7 @@ connection-ticket delivery.
 
 ## Tests
 
-`npm test` runs offline provider safety tests plus API integration tests for registration, login, protected routes, admin allowlisting, rental grants, and safe rejection of invalid device assignments. Tests use a temporary local SQLite database and do not contact Alibaba Cloud or create billable resources. GitHub Actions runs the same checks on pushes and pull requests.
+`npm test` runs offline provider safety tests, API integration tests for registration, login, protected routes, admin allowlisting, rental grants, audit logging, and safe rejection of invalid device assignments, plus a syntax check of the website's inline JavaScript. Tests use a temporary local SQLite database and do not contact Alibaba Cloud or create billable resources. GitHub Actions runs the same checks on pushes and pull requests.
 
 ## Endpoints
 - GET `/api/health`
