@@ -51,7 +51,10 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 
 - Alibaba authorization-free login must be enabled; otherwise ticket retrieval will fail.
 - Confirm the provider's streaming mode and ticket rules. Instance Edition/preemptive mode may only issue tickets for the same EndUserId; this implementation uses the app's stable user UUID.
-- Test the actual browser session on Android Chrome, desktop Chrome, and Firefox.
+- In the Alibaba Cloud Phone policy for the assigned instance, enable Clipboard in both directions: Paste to Cloud Phone and Paste Data to Local Device (two-way transfer). The Web SDK `setClipboardEnabled(true)` only enables the client feature; it does not override a server-side policy that denies clipboard transfer.
+- The client enables clipboard after `onConnected`. For SDK versions exposing `setClipboardModule`, the send button uses `sendClipboardDataToRemote` to push entered text directly to the cloud phone. Receiving copied text still depends on the instance policy and browser clipboard permission.
+- Safari requires the documented custom-IME clipboard path (`readClipboardDataByUser` and `useCustomIme`); the client sets these connection options for Safari sessions.
+- Test the actual browser session on Android Chrome, desktop Chrome, Safari, and Firefox.
 - Verify that the purchased Android image includes the needed Google services and that TikTok, YouTube, Play Store, audio/video decoding, and touch input work. Do not promise these until tested.
 - Add payment gateway/webhooks, a shared rate-limit store for multi-replica deployments, explicit origin policy, audit logs, monitoring, backups, account recovery, concurrency limits, and expiry cleanup before public rental launch.
 - Define whether customer data persists or is wiped between rentals. Do not recycle an instance between customers without an approved data-cleaning process.
