@@ -14,6 +14,8 @@ const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHea
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Quá nhiều lần đăng nhập/đăng ký. Vui lòng thử lại sau 15 phút." } });
 const ticketLimiter = rateLimit({ windowMs: 60 * 1000, limit: 6, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Đang yêu cầu kết nối quá nhanh. Vui lòng đợi một chút." } });
 app.use("/api", apiLimiter);
+// Prevent browsers and intermediary caches from retaining account, session, or ticket responses.
+app.use("/api", (_req, res, next) => { res.set("Cache-Control", "no-store, private"); next(); });
 // Serve only the vendor SDK assets; never expose the repository or environment files.
 app.use("/cloud-sdk", express.static(path.resolve(process.cwd(), "..", "cloud-sdk"), { dotfiles: "deny", index: false, fallthrough: true }));
 
