@@ -3,9 +3,10 @@ import helmet from "helmet";
 import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 import crypto from "node:crypto";
+import path from "node:path";
 
 const app = express();
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "32kb" }));
 
 const PORT = Number(process.env.PORT || 3000);
@@ -59,6 +60,7 @@ function auth(req, res, next) {
   } catch { return res.status(401).json({ error: "Phiên không hợp lệ." }); }
 }
 const isAdmin = user => user.role === "admin" || ADMIN_USER_IDS.has(user.id);
+app.get("/", (_req,res) => res.sendFile(path.resolve(process.cwd(), "..", "index.html")));
 app.get("/api/health", (_req,res) => res.json({ ok:true, service:"LONG GIA HUY Cloud Phone API", androidProviderConnected:false }));
 app.get("/api/plans", (_req,res) => res.json({ plans: plans.map(days => ({ days, label: days + " ngày" })) }));
 
