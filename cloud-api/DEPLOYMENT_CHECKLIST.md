@@ -14,6 +14,15 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 - Set `SESSION_SECRET` to a cryptographically random value of at least 32 characters.
 - Initially leave `ADMIN_USER_IDS` empty. Register the owner's account, copy the account ID, set `ADMIN_USER_IDS` to that exact ID in hosting secrets, then restart and sign in again.
 
+## 1A. Optional Docker deployment
+
+- Build from the repository root: `docker build -f cloud-api/Dockerfile -t long-gia-huy-cloud-phone .`.
+- Run with a persistent named volume mounted at `/data`; the image defaults to `DB_PATH=/data/cloudphone.sqlite`.
+- Set `SESSION_SECRET` and the Alibaba credentials as runtime secrets/environment variables. Do not bake secrets into the image.
+- Publish container port `3000` behind an HTTPS reverse proxy.
+- Mount the licensed Alibaba SDK directory read-only at `/app/cloud-sdk` in the container. The Docker build intentionally excludes vendor SDK assets.
+- The image runs as the unprivileged `node` user and includes a `/api/health` container health check.
+- Back up the persistent database volume before upgrades. This container does not configure backups or a payment service.
 ## 2. Configure Alibaba Cloud credentials safely
 
 - Create/verify the Alibaba Cloud account and complete billing setup.
