@@ -3,6 +3,7 @@ import * as $OpenApi from "@alicloud/openapi-client";
 import * as $Util from "@alicloud/tea-util";
 
 const region = process.env.ALIBABA_CLOUD_REGION || "ap-southeast-1";
+const endpoint = process.env.ALIBABA_CLOUD_ENDPOINT || `eds-aic.${region}.aliyuncs.com`;
 const accessKeyId = process.env.ALIBABA_CLOUD_ACCESS_KEY_ID;
 const accessKeySecret = process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET;
 
@@ -18,7 +19,7 @@ function createClient() {
   }
 
   const config = new $OpenApi.Config({ accessKeyId, accessKeySecret });
-  config.endpoint = `eds-aic.${region}.aliyuncs.com`;
+  config.endpoint = endpoint;
   return new EDSAIC.default(config);
 }
 
