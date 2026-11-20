@@ -138,6 +138,13 @@ test("account, session, admin and rental API flows", async t => {
       });
       assert.equal(badLogin.status, 401);
 
+      const unknownLogin = await request("/api/login", {
+        method: "POST",
+        body: { username: "unknown_user", password: "wrong-password" }
+      });
+      assert.equal(unknownLogin.status, 401);
+      assert.deepEqual(unknownLogin.data, badLogin.data);
+
       const login = await request("/api/login", {
         method: "POST",
         body: { username: "customer_1", password: "a-strong-test-password" }
