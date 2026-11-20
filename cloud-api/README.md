@@ -76,3 +76,10 @@ compatibility still require real-device testing. Payment gateway/webhooks, distr
 origin policy, monitoring, backups, account recovery,
 concurrency controls, expiry cleanup, and data-wiping policy must be completed
 before a public paid launch. Do not advertise the service as live yet.
+
+
+### Recent hardening
+- Admin plan grants and device assignments write their database changes and audit entries in a single SQLite transaction, so an audit failure cannot leave a partially recorded admin action.
+- Bearer-token parsing rejects tokens with extra separators before signature verification.
+- The browser stops its active cloud-phone session when authentication expires or the page is closed.
+- Integration tests include malformed bearer-token rejection.
