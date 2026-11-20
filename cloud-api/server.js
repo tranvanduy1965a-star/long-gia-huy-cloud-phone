@@ -9,6 +9,8 @@ import { describeCloudPhones, getConnectionTicket, providerConfigured } from "./
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "32kb" }));
+// Serve only the vendor SDK assets; never expose the repository or environment files.
+app.use("/cloud-sdk", express.static(path.resolve(process.cwd(), "..", "cloud-sdk"), { dotfiles: "deny", index: false, fallthrough: true }));
 
 const PORT = Number(process.env.PORT || 3000);
 const ADMIN_USER_IDS = new Set((process.env.ADMIN_USER_IDS || "").split(",").map(x => x.trim()).filter(Boolean));
