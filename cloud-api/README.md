@@ -9,7 +9,12 @@ connection-ticket delivery.
 2. Copy `.env.example` to `.env` and set a random `SESSION_SECRET` (at least 32 characters).
 3. Set `ADMIN_USER_IDS` only after creating the admin account and confirming its user ID.
 4. Run `npm install`, then `npm start`.
-5. API listens on port 3000 by default.
+5. Run `npm test` to execute the offline provider safety tests.
+6. API listens on port 3000 by default.
+
+## Tests
+
+`npm test` runs offline tests confirming that provider inventory and ticket calls fail closed when Alibaba credentials are absent. These tests do not contact Alibaba Cloud or create billable resources. GitHub Actions runs the same checks on pushes and pull requests.
 
 ## Endpoints
 - GET `/api/health`
