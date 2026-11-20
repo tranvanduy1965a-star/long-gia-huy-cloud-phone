@@ -102,6 +102,11 @@ export async function getConnectionTicket(instanceId, endUserId) {
   let model = getModels(response)[0];
   for (let attempt = 0; attempt < 12; attempt += 1) {
     if (model?.ticket && model?.appInstanceId) {
+      if (!model?.persistentAppInstanceId) {
+        const error = new Error("Alibaba Cloud did not return the PersistentAppInstanceId required by the Web SDK.");
+        error.code = "MISSING_PERSISTENT_APP_INSTANCE_ID";
+        throw error;
+      }
       return {
         ticket: model.ticket,
         appInstanceId: model.appInstanceId,
