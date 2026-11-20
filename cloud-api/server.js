@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 import crypto from "node:crypto";
 import path from "node:path";
-import { describeCloudPhones, providerConfigured } from "./provider.js";
+import { describeCloudPhones, getConnectionTicket, providerConfigured } from "./provider.js";
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -119,13 +119,41 @@ app.post("/api/admin/grant-plan", auth, (req,res) => {
   res.status(201).json({ id, userId, days, expiresAt:end.toISOString() });
 });
 
-app.post("/api/devices", auth, (req,res) => {
+app.get("/api/devices", auth, (req,res) => {
+  const device = db.prepare("SELECT id,provider,provider_instance_id,status,created_at FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(req.user.id);
+  res.json({ device: device || null });
+});
+
+// Admin assigns an already-purchased instance; this does not create billable resources.
+app.post("/api/admin/assign-device", auth, (req,res) => {
+  if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin." });
+  const userId = String(req.body?.userId || "");
+  const instanceId = String(req.body?.instanceId || "").trim();
+  if (!userId || !/^acp-[a-zA-Z0-9-]+$/.test(instanceId)) return res.status(400).json({ error:"Cần userId hợp lệ và instanceId dạng acp-..." });
+  if (!db.prepare("SELECT id FROM users WHERE id=?").get(userId)) return res.status(404).json({ error:"Không tìm thấy người dùng." });
+  const occupied = db.prepare("SELECT user_id FROM devices WHERE provider_instance_id=? AND user_id<>?").get(instanceId,userId);
+  if (occupied) return res.status(409).json({ error:"Máy này đang được gán cho tài khoản khác." });
+  const existing = db.prepare("SELECT id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(userId);
+  if (existing) { db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id); return res.json({ assigned:true,userId,instanceId }); }
+  const id = crypto.randomUUID();
+  db.prepare("INSERT INTO devices(id,user_id,provider,provider_instance_id,status,created_at) VALUES(?,?,?,?,?,?)").run(id,userId,"alibaba-cloud",instanceId,"assigned",now());
+  res.status(201).json({ assigned:true,userId,instanceId });
+});
+
+app.post("/api/devices/session", auth, async (req,res) => {
   const admin = isAdmin(req.user);
   const sub = db.prepare("SELECT expires_at FROM subscriptions WHERE user_id=? AND status='active' ORDER BY expires_at DESC LIMIT 1").get(req.user.id);
-  if (!admin && (!sub || Date.parse(sub.expires_at) <= Date.now()))
-    return res.status(402).json({ error:"Gói thuê đã hết hạn hoặc chưa được kích hoạt." });
-  // Never claim a device exists: provider adapter and credentials must be configured first.
-  return res.status(503).json({ error:"Chưa kết nối nhà cung cấp Android Cloud. Chưa có máy ảo nào được tạo.", code:"ANDROID_PROVIDER_NOT_CONFIGURED" });
+  if (!admin && (!sub || Date.parse(sub.expires_at) <= Date.now())) return res.status(402).json({ error:"Gói thuê đã hết hạn hoặc chưa được kích hoạt." });
+  const device = db.prepare("SELECT provider_instance_id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(req.user.id);
+  if (!device?.provider_instance_id) return res.status(404).json({ error:"Tài khoản chưa được gán máy Android Cloud." });
+  if (!providerConfigured()) return res.status(503).json({ error:"Máy chủ chưa cấu hình Alibaba Cloud.", code:"PROVIDER_NOT_CONFIGURED" });
+  try {
+    const ticket = await getConnectionTicket(device.provider_instance_id, req.user.id);
+    res.json({ provider:"alibaba-cloud",region:process.env.ALIBABA_CLOUD_REGION || "ap-southeast-1", ...ticket });
+  } catch (error) {
+    console.error("Cloud phone ticket request failed:", error?.code || error?.name || "unknown");
+    res.status(502).json({ error:"Chưa lấy được phiên điều khiển. Kiểm tra máy đã chạy và chế độ đăng nhập không cần ủy quyền đã được bật.", code:"CONNECTION_TICKET_FAILED" });
+  }
 });
 
 app.get("/api/admin/overview", auth, (req,res) => {
