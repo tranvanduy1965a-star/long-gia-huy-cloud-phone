@@ -85,3 +85,4 @@ before a public paid launch. Do not advertise the service as live yet.
 - Integration tests include malformed bearer-token rejection.
 
 - Alibaba Cloud instance inventory now follows provider pagination with a bounded page limit, so admin assignment checks do not silently miss devices beyond the first 100 records.
+- The website health panel refreshes the API/SDK/session indicators on demand, when the tab becomes visible, and every 30 seconds while visible. Admins can run the read-only provider inventory check from the panel; a configured credential alone is not proof that a cloud phone is provisioned or connectable.
