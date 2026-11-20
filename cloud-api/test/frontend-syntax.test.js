@@ -14,8 +14,8 @@ test("website inline JavaScript parses successfully", () => {
   assert.ok(scripts.length > 0, "Expected at least one inline script in index.html");
   for (const [index, source] of scripts.entries()) {
     assert.doesNotThrow(
-      () => new vm.Script(source, { filename: \`index.html:inline-script-\${index + 1}\` }),
-      \`Inline script \${index + 1} must have valid JavaScript syntax\`
+      () => new vm.Script(source, { filename: "index.html:inline-script-" + (index + 1) }),
+      "Inline script " + (index + 1) + " must have valid JavaScript syntax"
     );
   }
 });
