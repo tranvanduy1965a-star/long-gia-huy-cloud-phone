@@ -81,7 +81,8 @@ function auth(req, res, next) {
   if (got.length !== expected.length || !crypto.timingSafeEqual(got, expected)) return res.status(401).json({ error: "Phiên không hợp lệ." });
   try {
     const p = JSON.parse(Buffer.from(body, "base64url").toString());
-    if (p.exp < Date.now()) return res.status(401).json({ error: "Phiên đã hết hạn." });
+    if (typeof p.sub !== "string" || !Number.isFinite(p.exp)) return res.status(401).json({ error: "Phiên không hợp lệ." });
+    if (p.exp <= Date.now()) return res.status(401).json({ error: "Phiên đã hết hạn." });
     const user = db.prepare("SELECT id, username, role FROM users WHERE id=?").get(p.sub);
     if (!user) return res.status(401).json({ error: "Tài khoản không tồn tại." });
     req.user = user; next();
@@ -214,7 +215,7 @@ app.get("/api/admin/overview", auth, (req,res) => {
     FROM admin_audit_log a
     JOIN users actor ON actor.id=a.actor_user_id
     LEFT JOIN users target ON target.id=a.target_user_id
-    ORDER BY a.created_at DESC LIMIT 100`).all()
+undefined`).all()
     .map(row => ({ ...row, details: JSON.parse(row.details_json) }));
   res.json({ users, subscriptions, auditLogs, deviceProviderConfigured:providerConfigured() });
 });
