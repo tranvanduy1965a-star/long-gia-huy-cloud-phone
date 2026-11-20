@@ -215,7 +215,7 @@ app.get("/api/admin/overview", auth, (req,res) => {
     FROM admin_audit_log a
     JOIN users actor ON actor.id=a.actor_user_id
     LEFT JOIN users target ON target.id=a.target_user_id
-undefined`).all()
+    ORDER BY a.created_at DESC,a.rowid DESC LIMIT 100`).all()
     .map(row => ({ ...row, details: JSON.parse(row.details_json) }));
   res.json({ users, subscriptions, auditLogs, deviceProviderConfigured:providerConfigured() });
 });
