@@ -7,9 +7,8 @@ services:
     runtime: node
     plan: starter
     region: singapore
-    rootDir: cloud-api
-    buildCommand: npm install --omit=dev
-    startCommand: npm start
+    buildCommand: npm --prefix cloud-api install --omit=dev
+    startCommand: npm --prefix cloud-api start
     healthCheckPath: /api/health
     autoDeploy: true
     disk:
