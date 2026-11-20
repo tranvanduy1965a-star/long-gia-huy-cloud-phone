@@ -36,7 +36,7 @@ For video-oriented apps such as TikTok and YouTube, use the **Standard** profile
 
 The provider's guidance identifies Standard as suitable for low-resolution video streaming. These are published compute subscription prices, not a complete bill. Network bandwidth, taxes, NAT/EIP, backup storage, and other add-ons may cost extra. Confirm the checkout quote before purchase. The provider currently lists Singapore standard network bandwidth at USD 2.95/Mbps/month.
 
-**Important billing constraint:** for international customers, the provider announced that new pay-as-you-go purchases for this Cloud Phone product were discontinued from 2025-09-08. Plan on a subscription, not hourly on-demand billing, unless the console explicitly shows a newer eligible offer for the account.
+**Billing note (checked 2026-11-20):** the current official billing page lists both subscription and pay-as-you-go for Instance Edition outside mainland China. For Standard in regions outside mainland China, the listed rates are USD 33.0697/month subscription or USD 0.1252/hour pay-as-you-go. The console and checkout for the actual account are authoritative; verify availability, minimum billing cycle, taxes, network charges, and any account-specific restrictions before purchase.
 
 ## Product architecture
 
