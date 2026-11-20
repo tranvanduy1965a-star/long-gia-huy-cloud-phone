@@ -25,12 +25,12 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 - Back up the persistent database volume before upgrades. This container does not configure backups or a payment service.
 ## 1B. Docker Compose deployment
 
-- Create a private deployment `.env` file from `cloud-api/.env.example`; set a unique `SESSION_SECRET` and the required Alibaba credentials. Never commit this file.
+- From the repository root, run `cp cloud-api/.env.example .env`, then edit the root `.env`: set a unique random `SESSION_SECRET` (at least 32 characters) and the Alibaba credentials. The root `.env` is ignored by Git; never commit or share it.
 - Put the official, licensed Alibaba Web SDK files in the local `cloud-sdk/` folder, preserving vendor subdirectories. This folder is intentionally excluded from the image build and mounted read-only at runtime.
 - From the repository root, run `docker compose up -d --build`.
 - Check startup with `docker compose ps` and `docker compose logs -f cloud-phone-api`; verify `https://your-domain/api/health` through an HTTPS reverse proxy.
 - Persistent SQLite data is stored in the named `cloudphone-data` volume. Back it up before replacing containers; do not delete the volume during routine updates.
-- The Compose file publishes the API port directly. For public production use, put it behind HTTPS and restrict direct network access to the container port.
+- Compose binds the API port to `127.0.0.1` only by default, so it is not directly exposed to the public network. Configure your HTTPS reverse proxy on the same host to forward to `127.0.0.1:3000`. Change the bind only if your hosting topology explicitly requires it and firewall it appropriately.
 ## 2. Configure Alibaba Cloud credentials safely
 
 - Create/verify the Alibaba Cloud account and complete billing setup.
