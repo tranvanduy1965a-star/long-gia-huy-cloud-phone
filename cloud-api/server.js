@@ -43,10 +43,29 @@ CREATE TABLE IF NOT EXISTS devices (
   provider_instance_id TEXT, status TEXT NOT NULL DEFAULT 'not_provisioned',
   created_at TEXT NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id TEXT PRIMARY KEY,
+  actor_user_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_user_id TEXT,
+  details_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(actor_user_id) REFERENCES users(id),
+  FOREIGN KEY(target_user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_expiry ON subscriptions(user_id, status, expires_at DESC);
+CREATE INDEX IF NOT EXISTS idx_devices_user_created ON devices(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_devices_provider_instance ON devices(provider_instance_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_actor ON admin_audit_log(actor_user_id, created_at DESC);
 `);
 
 const plans = [1, 2, 3, 7, 30];
 const now = () => new Date().toISOString();
+const writeAudit = (actorUserId, action, targetUserId = null, details = {}) => {
+  db.prepare("INSERT INTO admin_audit_log(id,actor_user_id,action,target_user_id,details_json,created_at) VALUES(?,?,?,?,?,?)")
+    .run(crypto.randomUUID(), actorUserId, action, targetUserId, JSON.stringify(details), now());
+};
 const sign = payload => {
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest("base64url");
@@ -125,6 +144,7 @@ app.post("/api/admin/grant-plan", auth, (req,res) => {
   const id = crypto.randomUUID(), start = new Date(), end = new Date(start.getTime() + days*86400000);
   db.prepare("INSERT INTO subscriptions(id,user_id,plan_days,starts_at,expires_at,status) VALUES(?,?,?,?,?,?)")
     .run(id,userId,days,start.toISOString(),end.toISOString(),"active");
+  writeAudit(req.user.id, "grant_plan", userId, { days, subscriptionId:id, expiresAt:end.toISOString() });
   res.status(201).json({ id, userId, days, expiresAt:end.toISOString() });
 });
 
@@ -152,9 +172,14 @@ app.post("/api/admin/assign-device", auth, async (req,res) => {
   const occupied = db.prepare("SELECT user_id FROM devices WHERE provider_instance_id=? AND user_id<>?").get(instanceId,userId);
   if (occupied) return res.status(409).json({ error:"Máy này đang được gán cho tài khoản khác." });
   const existing = db.prepare("SELECT id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(userId);
-  if (existing) { db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id); return res.json({ assigned:true,userId,instanceId }); }
+  if (existing) {
+    db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id);
+    writeAudit(req.user.id, "assign_device", userId, { instanceId });
+    return res.json({ assigned:true,userId,instanceId });
+  }
   const id = crypto.randomUUID();
   db.prepare("INSERT INTO devices(id,user_id,provider,provider_instance_id,status,created_at) VALUES(?,?,?,?,?,?)").run(id,userId,"alibaba-cloud",instanceId,"assigned",now());
+  writeAudit(req.user.id, "assign_device", userId, { instanceId });
   res.status(201).json({ assigned:true,userId,instanceId });
 });
 
@@ -179,7 +204,27 @@ app.get("/api/admin/overview", auth, (req,res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin." });
   const users = db.prepare("SELECT id,username,created_at FROM users ORDER BY created_at DESC").all();
   const subscriptions = db.prepare("SELECT user_id,plan_days,expires_at,status FROM subscriptions ORDER BY expires_at DESC").all();
-  res.json({ users, subscriptions, deviceProviderConfigured:providerConfigured() });
+  const auditLogs = db.prepare(`SELECT a.id,a.actor_user_id,actor.username AS actor_username,a.action,
+    a.target_user_id,target.username AS target_username,a.details_json,a.created_at
+    FROM admin_audit_log a
+    JOIN users actor ON actor.id=a.actor_user_id
+    LEFT JOIN users target ON target.id=a.target_user_id
+    ORDER BY a.created_at DESC LIMIT 100`).all()
+    .map(row => ({ ...row, details: JSON.parse(row.details_json) }));
+  res.json({ users, subscriptions, auditLogs, deviceProviderConfigured:providerConfigured() });
 });
 
-app.listen(PORT, () => console.log(`LONG GIA HUY API listening on :${PORT}`));
+const server = app.listen(PORT, () => console.log(`LONG GIA HUY API listening on :${PORT}`));
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`Received ${signal}; shutting down gracefully.`);
+  server.close(() => {
+    try { db.close(); }
+    finally { process.exit(0); }
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
