@@ -14,7 +14,7 @@ connection-ticket delivery.
 
 ## Tests
 
-`npm test` runs offline tests confirming that provider inventory and ticket calls fail closed when Alibaba credentials are absent. These tests do not contact Alibaba Cloud or create billable resources. GitHub Actions runs the same checks on pushes and pull requests.
+`npm test` runs offline provider safety tests plus API integration tests for registration, login, protected routes, admin allowlisting, rental grants, and safe rejection of invalid device assignments. Tests use a temporary local SQLite database and do not contact Alibaba Cloud or create billable resources. GitHub Actions runs the same checks on pushes and pull requests.
 
 ## Endpoints
 - GET `/api/health`
