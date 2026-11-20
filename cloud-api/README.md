@@ -83,3 +83,5 @@ before a public paid launch. Do not advertise the service as live yet.
 - Bearer-token parsing rejects tokens with extra separators before signature verification.
 - The browser stops its active cloud-phone session when authentication expires or the page is closed.
 - Integration tests include malformed bearer-token rejection.
+
+- Alibaba Cloud instance inventory now follows provider pagination with a bounded page limit, so admin assignment checks do not silently miss devices beyond the first 100 records.
