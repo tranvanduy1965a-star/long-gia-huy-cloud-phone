@@ -90,6 +90,20 @@ test("account, session, admin and rental API flows", async t => {
   try {
     await startApi();
 
+    await t.test("returns safe JSON errors for malformed requests and unknown API routes", async () => {
+      const malformed = await fetch(`${baseUrl}/api/login`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{"
+      });
+      assert.equal(malformed.status, 400);
+      assert.deepEqual(await malformed.json(), { error: "Dữ liệu gửi lên không hợp lệ." });
+
+      const missing = await request("/api/does-not-exist");
+      assert.equal(missing.status, 404);
+      assert.deepEqual(missing.data, { error: "Không tìm thấy API này." });
+    });
+
     await t.test("publishes plans and rejects weak registration", async () => {
       const plans = await request("/api/plans");
       assert.equal(plans.status, 200);
