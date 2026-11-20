@@ -23,7 +23,15 @@ function createClient() {
   return new EDSAIC.default(config);
 }
 
-// Read-only connectivity check. It does not create, start, stop, or purchase resources.
+function pause(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getModels(response) {
+  return response.body?.instanceConnectionModels || [];
+}
+
+// Read-only inventory check. It does not create, start, stop, or purchase resources.
 export async function describeCloudPhones() {
   const client = createClient();
   const request = new $EDSAIC.DescribeAndroidInstancesRequest({
@@ -49,24 +57,57 @@ export async function describeCloudPhones() {
   };
 }
 
+// Alibaba may return a TaskId instead of a Ticket. Poll the same operation
+// using InstanceTasks until the ticket is ready, or fail with a bounded timeout.
 export async function getConnectionTicket(instanceId, endUserId) {
   const client = createClient();
-  const request = new $EDSAIC.BatchGetAcpConnectionTicketRequest({
-    instanceIds: [instanceId],
-    endUserId
-  });
   const runtime = new $Util.RuntimeOptions({});
-  const response = await client.batchGetAcpConnectionTicketWithOptions(request, runtime);
-  const model = response.body?.instanceConnectionModels?.[0];
-  if (!model?.ticket || !model?.appInstanceId) {
-    const error = new Error("Alibaba Cloud did not return a ready connection ticket.");
-    error.code = model?.errorCode || model?.taskStatus || "TICKET_NOT_READY";
-    throw error;
+  let response = await client.batchGetAcpConnectionTicketWithOptions(
+    new $EDSAIC.BatchGetAcpConnectionTicketRequest({
+      instanceIds: [instanceId],
+      endUserId
+    }),
+    runtime
+  );
+
+  let model = getModels(response)[0];
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    if (model?.ticket && model?.appInstanceId) {
+      return {
+        ticket: model.ticket,
+        appInstanceId: model.appInstanceId,
+        persistentAppInstanceId: model.persistentAppInstanceId,
+        appInstanceGroupId: model.appInstanceGroupId,
+        port: model.port
+      };
+    }
+
+    const taskId = model?.taskId;
+    const taskStatus = String(model?.taskStatus || "").toUpperCase();
+    if (taskStatus === "FAILED" || model?.errorCode) {
+      const error = new Error("Alibaba Cloud could not generate a connection ticket.");
+      error.code = model.errorCode || taskStatus;
+      throw error;
+    }
+    if (!taskId) {
+      const error = new Error("Alibaba Cloud returned neither a ticket nor a task ID.");
+      error.code = "TICKET_NOT_READY";
+      throw error;
+    }
+
+    if (attempt === 11) break;
+    await pause(1000);
+    response = await client.batchGetAcpConnectionTicketWithOptions(
+      new $EDSAIC.BatchGetAcpConnectionTicketRequest({
+        instanceTasks: [{ instanceId, taskId }],
+        endUserId
+      }),
+      runtime
+    );
+    model = getModels(response)[0];
   }
-  return {
-    ticket: model.ticket,
-    appInstanceId: model.appInstanceId,
-    persistentAppInstanceId: model.persistentAppInstanceId,
-    appInstanceGroupId: model.appInstanceGroupId
-  };
+
+  const error = new Error("Timed out while waiting for Alibaba Cloud connection ticket.");
+  error.code = "TICKET_POLL_TIMEOUT";
+  throw error;
 }
