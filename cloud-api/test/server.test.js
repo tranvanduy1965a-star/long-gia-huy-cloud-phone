@@ -79,7 +79,7 @@ async function request(route, { method = "GET", token, body } = {}) {
     },
     ...(body ? { body: JSON.stringify(body) } : {})
   });
-  return { status: response.status, data: await response.json() };
+  return { status: response.status, data: await response.json(), cacheControl: response.headers.get("cache-control") };
 }
 
 test("account, session, admin and rental API flows", async t => {
@@ -129,10 +129,12 @@ test("account, session, admin and rental API flows", async t => {
         body: { username: "customer_1", password: "a-strong-test-password" }
       });
       assert.equal(login.status, 200);
+      assert.match(login.cacheControl || "", /no-store/i);
       userToken = login.data.token;
 
       const me = await request("/api/me", { token: userToken });
       assert.equal(me.status, 200);
+      assert.match(me.cacheControl || "", /no-store/i);
       assert.equal(me.data.user.id, userId);
       assert.equal(me.data.subscription, null);
 
