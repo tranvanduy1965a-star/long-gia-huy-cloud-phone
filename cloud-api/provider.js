@@ -34,25 +34,40 @@ function getModels(response) {
 // Read-only inventory check. It does not create, start, stop, or purchase resources.
 export async function describeCloudPhones() {
   const client = createClient();
-  const request = new $EDSAIC.DescribeAndroidInstancesRequest({
-    maxResults: 100,
-    saleMode: "Instance"
-  });
   const runtime = new $Util.RuntimeOptions({});
-  const response = await client.describeAndroidInstancesWithOptions(request, runtime);
-  const body = response.body || {};
-  const instances = (body.instanceModel || []).map(item => ({
-    id: item.androidInstanceId,
-    name: item.androidInstanceName,
-    status: item.androidInstanceStatus,
-    region: item.regionId,
-    androidVersion: item.systemVersion,
-    instanceType: item.instanceType
-  }));
+  const instances = [];
+  let nextToken;
+  let totalCount = 0;
+  // Bound pagination to avoid an accidental unbounded provider API loop.
+  for (let page = 0; page < 20; page += 1) {
+    const request = new $EDSAIC.DescribeAndroidInstancesRequest({
+      maxResults: 100,
+      saleMode: "Instance",
+      ...(nextToken ? { nextToken } : {})
+    });
+    const response = await client.describeAndroidInstancesWithOptions(request, runtime);
+    const body = response.body || {};
+    totalCount = body.totalCount ?? totalCount;
+    instances.push(...(body.instanceModel || []).map(item => ({
+      id: item.androidInstanceId,
+      name: item.androidInstanceName,
+      status: item.androidInstanceStatus,
+      region: item.regionId,
+      androidVersion: item.systemVersion,
+      instanceType: item.instanceType
+    })).filter(item => item.id));
+    nextToken = body.nextToken;
+    if (!nextToken) break;
+    if (page === 19) {
+      const error = new Error("Alibaba Cloud inventory exceeded the safe pagination limit.");
+      error.code = "INVENTORY_PAGE_LIMIT";
+      throw error;
+    }
+  }
   return {
     connected: true,
     region,
-    totalCount: body.totalCount ?? instances.length,
+    totalCount: totalCount || instances.length,
     instances
   };
 }
