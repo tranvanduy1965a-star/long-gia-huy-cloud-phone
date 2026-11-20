@@ -9,7 +9,7 @@ connection-ticket delivery.
 2. Copy `.env.example` to `.env` and set a random `SESSION_SECRET` (at least 32 characters).
 3. Set `ADMIN_USER_IDS` only after creating the admin account and confirming its user ID.
 4. Run `npm install`, then `npm start`.
-5. Run `npm test` to execute the offline provider safety tests.
+5. Run `npm test` to execute provider safety, API integration, and frontend syntax tests.
 6. API listens on port 3000 by default.
 
 ## Tests
@@ -43,7 +43,7 @@ the ticket only when Alibaba reports it ready.
 
 ## Basic API protections
 
-The API applies general request throttling, stricter limits to login/registration,
+Admin plan grants extend from the later of the current time or the user's latest active expiry, so early renewals do not discard remaining rental time. Admin plan grants and device assignments are written to a read-only audit history exposed in the admin overview. Session tokens validate both subject and expiry claims.\n\nThe API applies general request throttling, stricter limits to login/registration,
 and a separate limit to connection-ticket requests. These limits use the default
 in-memory store and reset when the process restarts; configure a shared store
 such as Redis before running multiple API replicas. SQLite foreign-key enforcement
@@ -73,6 +73,6 @@ No cloud phone has been purchased or assigned in a live Alibaba account.
 Alibaba's auth-free ticket login may need to be enabled by support. Google Play,
 GMS, TikTok, browser streaming, touch, clipboard, audio/video, and Android Chrome
 compatibility still require real-device testing. Payment gateway/webhooks, distributed rate-limit storage for multi-instance deployments,
-origin policy, audit logs, monitoring, backups, account recovery,
+origin policy, monitoring, backups, account recovery,
 concurrency controls, expiry cleanup, and data-wiping policy must be completed
 before a public paid launch. Do not advertise the service as live yet.
