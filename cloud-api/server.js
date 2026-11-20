@@ -94,7 +94,7 @@ function auth(req, res, next) {
 }
 const isAdmin = user => user.role === "admin" || ADMIN_USER_IDS.has(user.id);
 app.get("/", (_req,res) => res.sendFile(path.resolve(process.cwd(), "..", "index.html")));
-app.get("/api/health", (_req,res) => res.json({ ok:true, service:"LONG GIA HUY Cloud Phone API", androidProviderConfigured:providerConfigured(), androidProviderConnected:false }));
+app.get("/api/health", (_req,res) => res.json({ ok:true, service:"LONG GIA HUY Cloud Phone API", androidProviderConfigured:providerConfigured(), androidProviderConnected:null }));
 app.get("/api/plans", (_req,res) => res.json({ plans: plans.map(days => ({ days, label: days + " ngày" })) }));
 
 app.post("/api/register", authLimiter, async (req,res) => {
