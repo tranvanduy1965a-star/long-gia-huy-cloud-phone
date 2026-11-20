@@ -74,7 +74,10 @@ const sign = payload => {
 };
 function auth(req, res, next) {
   const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
-  const [body, sig] = token.split(".");
+  const separator = token.indexOf(".");
+  if (separator <= 0 || separator !== token.lastIndexOf(".")) return res.status(401).json({ error: "Phiên không hợp lệ." });
+  const body = token.slice(0, separator);
+  const sig = token.slice(separator + 1);
   if (!body || !sig) return res.status(401).json({ error: "Cần đăng nhập." });
   const expected = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest();
   let got;
@@ -149,9 +152,11 @@ app.post("/api/admin/grant-plan", auth, (req,res) => {
   const start = new Date(Math.max(currentTime, Number.isFinite(existingExpiry) ? existingExpiry : 0));
   const end = new Date(start.getTime() + days*86400000);
   const id = crypto.randomUUID();
-  db.prepare("INSERT INTO subscriptions(id,user_id,plan_days,starts_at,expires_at,status) VALUES(?,?,?,?,?,?)")
-    .run(id,userId,days,start.toISOString(),end.toISOString(),"active");
-  writeAudit(req.user.id, "grant_plan", userId, { days, subscriptionId:id, expiresAt:end.toISOString() });
+  db.transaction(() => {
+    db.prepare("INSERT INTO subscriptions(id,user_id,plan_days,starts_at,expires_at,status) VALUES(?,?,?,?,?,?)")
+      .run(id,userId,days,start.toISOString(),end.toISOString(),"active");
+    writeAudit(req.user.id, "grant_plan", userId, { days, subscriptionId:id, expiresAt:end.toISOString() });
+  })();
   res.status(201).json({ id, userId, days, expiresAt:end.toISOString() });
 });
 
@@ -181,13 +186,17 @@ app.post("/api/admin/assign-device", auth, async (req,res) => {
   const existing = db.prepare("SELECT id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(userId);
   try {
     if (existing) {
-      db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id);
-      writeAudit(req.user.id, "assign_device", userId, { instanceId });
+      db.transaction(() => {
+        db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id);
+        writeAudit(req.user.id, "assign_device", userId, { instanceId });
+      })();
       return res.json({ assigned:true,userId,instanceId });
     }
     const id = crypto.randomUUID();
-    db.prepare("INSERT INTO devices(id,user_id,provider,provider_instance_id,status,created_at) VALUES(?,?,?,?,?,?)").run(id,userId,"alibaba-cloud",instanceId,"assigned",now());
-    writeAudit(req.user.id, "assign_device", userId, { instanceId });
+    db.transaction(() => {
+      db.prepare("INSERT INTO devices(id,user_id,provider,provider_instance_id,status,created_at) VALUES(?,?,?,?,?,?)").run(id,userId,"alibaba-cloud",instanceId,"assigned",now());
+      writeAudit(req.user.id, "assign_device", userId, { instanceId });
+    })();
     res.status(201).json({ assigned:true,userId,instanceId });
   } catch (error) {
     if (error?.code === "SQLITE_CONSTRAINT_UNIQUE") return res.status(409).json({ error:"Máy này vừa được gán cho tài khoản khác." });
