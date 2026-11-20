@@ -109,7 +109,11 @@ app.post("/api/register", authLimiter, async (req,res) => {
     const hash = await bcrypt.hash(password, 12);
     db.prepare("INSERT INTO users(id,username,password_hash,created_at) VALUES(?,?,?,?)").run(id, username, hash, now());
     res.status(201).json({ id, username, message: "Đăng ký thành công. Tài khoản cần được cấp gói thuê trước khi tạo máy." });
-  } catch { res.status(409).json({ error: "Tên tài khoản đã được sử dụng." }); }
+  } catch (error) {
+    if (error?.code === "SQLITE_CONSTRAINT_UNIQUE") return res.status(409).json({ error: "Tên tài khoản đã được sử dụng." });
+    console.error("Account registration failed:", error?.code || error?.name || "unknown");
+    return res.status(500).json({ error: "Không thể tạo tài khoản lúc này. Vui lòng thử lại sau." });
+  }
 });
 app.post("/api/login", authLimiter, async (req,res) => {
   const username = String(req.body?.username || "").trim().toLowerCase();
@@ -235,6 +239,21 @@ app.get("/api/admin/overview", auth, (req,res) => {
     ORDER BY a.created_at DESC,a.rowid DESC LIMIT 100`).all()
     .map(row => ({ ...row, details: JSON.parse(row.details_json) }));
   res.json({ users, subscriptions, auditLogs, deviceProviderConfigured:providerConfigured() });
+});
+
+// Keep API failures machine-readable; never expose stack traces or SQL details to clients.
+app.use("/api", (_req, res) => res.status(404).json({ error: "Không tìm thấy API này." }));
+app.use((error, _req, res, _next) => {
+  const status = Number.isInteger(error?.status) && error.status >= 400 && error.status < 500
+    ? error.status
+    : 500;
+  if (status >= 500) console.error("Unhandled API error:", error?.code || error?.name || "unknown");
+  const message = status === 400
+    ? "Dữ liệu gửi lên không hợp lệ."
+    : status === 413
+      ? "Dữ liệu gửi lên quá lớn."
+      : "Máy chủ gặp lỗi. Vui lòng thử lại sau.";
+  res.status(status).json({ error: message });
 });
 
 const server = app.listen(PORT, () => console.log(`LONG GIA HUY API listening on :${PORT}`));
