@@ -4,11 +4,16 @@ import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 import crypto from "node:crypto";
 import path from "node:path";
+import rateLimit from "express-rate-limit";
 import { describeCloudPhones, getConnectionTicket, providerConfigured } from "./provider.js";
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "32kb" }));
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: "draft-7", legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Quá nhiều lần đăng nhập/đăng ký. Vui lòng thử lại sau 15 phút." } });
+const ticketLimiter = rateLimit({ windowMs: 60 * 1000, limit: 6, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Đang yêu cầu kết nối quá nhanh. Vui lòng đợi một chút." } });
+app.use("/api", apiLimiter);
 // Serve only the vendor SDK assets; never expose the repository or environment files.
 app.use("/cloud-sdk", express.static(path.resolve(process.cwd(), "..", "cloud-sdk"), { dotfiles: "deny", index: false, fallthrough: true }));
 
@@ -22,6 +27,7 @@ if (!SESSION_SECRET || SESSION_SECRET.length < 32) {
 
 const db = new Database(process.env.DB_PATH || "./cloudphone.sqlite");
 db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
@@ -67,11 +73,11 @@ app.get("/", (_req,res) => res.sendFile(path.resolve(process.cwd(), "..", "index
 app.get("/api/health", (_req,res) => res.json({ ok:true, service:"LONG GIA HUY Cloud Phone API", androidProviderConfigured:providerConfigured(), androidProviderConnected:false }));
 app.get("/api/plans", (_req,res) => res.json({ plans: plans.map(days => ({ days, label: days + " ngày" })) }));
 
-app.post("/api/register", async (req,res) => {
+app.post("/api/register", authLimiter, async (req,res) => {
   const username = String(req.body?.username || "").trim().toLowerCase();
   const password = String(req.body?.password || "");
-  if (!/^[a-z0-9_]{4,24}$/.test(username) || password.length < 10)
-    return res.status(400).json({ error: "Tên tài khoản 4–24 ký tự (a-z, 0-9, _); mật khẩu tối thiểu 10 ký tự." });
+  if (!/^[a-z0-9_]{4,24}$/.test(username) || password.length < 10 || password.length > 128)
+    return res.status(400).json({ error: "Tên tài khoản 4–24 ký tự (a-z, 0-9, _); mật khẩu từ 10 đến 128 ký tự." });
   const id = crypto.randomUUID();
   try {
     const hash = await bcrypt.hash(password, 12);
@@ -79,9 +85,10 @@ app.post("/api/register", async (req,res) => {
     res.status(201).json({ id, username, message: "Đăng ký thành công. Tài khoản cần được cấp gói thuê trước khi tạo máy." });
   } catch { res.status(409).json({ error: "Tên tài khoản đã được sử dụng." }); }
 });
-app.post("/api/login", async (req,res) => {
+app.post("/api/login", authLimiter, async (req,res) => {
   const username = String(req.body?.username || "").trim().toLowerCase();
   const password = String(req.body?.password || "");
+  if (!username || password.length > 128) return res.status(400).json({ error: "Thông tin đăng nhập không hợp lệ." });
   const user = db.prepare("SELECT * FROM users WHERE username=?").get(username);
   if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ error: "Sai tài khoản hoặc mật khẩu." });
   const admin = isAdmin(user);
@@ -127,12 +134,21 @@ app.get("/api/devices", auth, (req,res) => {
 });
 
 // Admin assigns an already-purchased instance; this does not create billable resources.
-app.post("/api/admin/assign-device", auth, (req,res) => {
+app.post("/api/admin/assign-device", auth, async (req,res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin." });
   const userId = String(req.body?.userId || "");
   const instanceId = String(req.body?.instanceId || "").trim();
   if (!userId || !/^acp-[a-zA-Z0-9-]+$/.test(instanceId)) return res.status(400).json({ error:"Cần userId hợp lệ và instanceId dạng acp-..." });
   if (!db.prepare("SELECT id FROM users WHERE id=?").get(userId)) return res.status(404).json({ error:"Không tìm thấy người dùng." });
+  if (!providerConfigured()) return res.status(503).json({ error:"Cần cấu hình Alibaba Cloud trước khi gán máy." });
+  try {
+    const inventory = await describeCloudPhones();
+    if (!inventory.instances.some(item => item.id === instanceId))
+      return res.status(404).json({ error:"Không tìm thấy máy này trong danh sách Alibaba Cloud của vùng đã cấu hình." });
+  } catch (error) {
+    console.error("Cloud phone assignment verification failed:", error?.code || error?.name || "unknown");
+    return res.status(502).json({ error:"Không xác minh được máy trên Alibaba Cloud; chưa thực hiện gán." });
+  }
   const occupied = db.prepare("SELECT user_id FROM devices WHERE provider_instance_id=? AND user_id<>?").get(instanceId,userId);
   if (occupied) return res.status(409).json({ error:"Máy này đang được gán cho tài khoản khác." });
   const existing = db.prepare("SELECT id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(userId);
@@ -142,7 +158,7 @@ app.post("/api/admin/assign-device", auth, (req,res) => {
   res.status(201).json({ assigned:true,userId,instanceId });
 });
 
-app.post("/api/devices/session", auth, async (req,res) => {
+app.post("/api/devices/session", auth, ticketLimiter, async (req,res) => {
   const admin = isAdmin(req.user);
   const sub = db.prepare("SELECT expires_at FROM subscriptions WHERE user_id=? AND status='active' ORDER BY expires_at DESC LIMIT 1").get(req.user.id);
   if (!admin && (!sub || Date.parse(sub.expires_at) <= Date.now())) return res.status(402).json({ error:"Gói thuê đã hết hạn hoặc chưa được kích hoạt." });
@@ -151,6 +167,7 @@ app.post("/api/devices/session", auth, async (req,res) => {
   if (!providerConfigured()) return res.status(503).json({ error:"Máy chủ chưa cấu hình Alibaba Cloud.", code:"PROVIDER_NOT_CONFIGURED" });
   try {
     const ticket = await getConnectionTicket(device.provider_instance_id, req.user.id);
+    res.set("Cache-Control", "no-store, private");
     res.json({ provider:"alibaba-cloud",region:process.env.ALIBABA_CLOUD_REGION || "ap-southeast-1", ...ticket });
   } catch (error) {
     console.error("Cloud phone ticket request failed:", error?.code || error?.name || "unknown");
