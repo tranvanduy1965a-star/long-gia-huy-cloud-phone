@@ -48,3 +48,25 @@ export async function describeCloudPhones() {
     instances
   };
 }
+
+export async function getConnectionTicket(instanceId, endUserId) {
+  const client = createClient();
+  const request = new $EDSAIC.BatchGetAcpConnectionTicketRequest({
+    instanceIds: [instanceId],
+    endUserId
+  });
+  const runtime = new $Util.RuntimeOptions({});
+  const response = await client.batchGetAcpConnectionTicketWithOptions(request, runtime);
+  const model = response.body?.instanceConnectionModels?.[0];
+  if (!model?.ticket || !model?.appInstanceId) {
+    const error = new Error("Alibaba Cloud did not return a ready connection ticket.");
+    error.code = model?.errorCode || model?.taskStatus || "TICKET_NOT_READY";
+    throw error;
+  }
+  return {
+    ticket: model.ticket,
+    appInstanceId: model.appInstanceId,
+    persistentAppInstanceId: model.persistentAppInstanceId,
+    appInstanceGroupId: model.appInstanceGroupId
+  };
+}
