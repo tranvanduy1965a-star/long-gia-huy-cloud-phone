@@ -19,7 +19,9 @@ subscription expiry, and admin plan grants. It does **not** create Android VMs y
 - POST /api/admin/grant-plan { userId, days } (admin only; days 1,2,3,7,30)
 - GET /api/admin/overview (admin only)
 - GET /api/admin/provider/status (admin only; read-only Alibaba Cloud connectivity and instance inventory check)
-- POST /api/devices (still disabled until instance assignment and remote-session delivery are implemented)
+- GET /api/devices (current user device assignment)
+- POST /api/admin/assign-device { userId, instanceId } (admin only; assigns an already-purchased `acp-...` instance)
+- POST /api/devices/session (checks subscription and assignment, then returns a short-lived Alibaba connection ticket)
 
 ## Important
 - This starter uses SQLite; use persistent disk storage in production.
