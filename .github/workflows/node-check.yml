@@ -1,0 +1,24 @@
+name: Node.js syntax checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate API JavaScript syntax
+        run: |
+          node --check cloud-api/server.js
+          node --check cloud-api/provider.js
+      - name: Validate package manifest
+        run: node -e "JSON.parse(require('node:fs').readFileSync('cloud-api/package.json', 'utf8'))"
