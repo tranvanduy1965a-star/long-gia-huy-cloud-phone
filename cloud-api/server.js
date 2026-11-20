@@ -141,7 +141,12 @@ app.post("/api/admin/grant-plan", auth, (req,res) => {
   if (!plans.includes(days)) return res.status(400).json({ error:"Gói không hợp lệ." });
   const user = db.prepare("SELECT id FROM users WHERE id=?").get(userId);
   if (!user) return res.status(404).json({ error:"Không tìm thấy người dùng." });
-  const id = crypto.randomUUID(), start = new Date(), end = new Date(start.getTime() + days*86400000);
+  const currentTime = Date.now();
+  const existing = db.prepare("SELECT expires_at FROM subscriptions WHERE user_id=? AND status='active' ORDER BY expires_at DESC LIMIT 1").get(userId);
+  const existingExpiry = existing ? Date.parse(existing.expires_at) : 0;
+  const start = new Date(Math.max(currentTime, Number.isFinite(existingExpiry) ? existingExpiry : 0));
+  const end = new Date(start.getTime() + days*86400000);
+  const id = crypto.randomUUID();
   db.prepare("INSERT INTO subscriptions(id,user_id,plan_days,starts_at,expires_at,status) VALUES(?,?,?,?,?,?)")
     .run(id,userId,days,start.toISOString(),end.toISOString(),"active");
   writeAudit(req.user.id, "grant_plan", userId, { days, subscriptionId:id, expiresAt:end.toISOString() });
