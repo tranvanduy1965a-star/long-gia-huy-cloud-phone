@@ -32,22 +32,19 @@ function getModels(response) {
 }
 
 // Read-only inventory check. It does not create, start, stop, or purchase resources.
-export async function describeCloudPhones() {
-  const client = createClient();
-  const runtime = new $Util.RuntimeOptions({});
+// Pure pagination helper, exported so pagination edge cases can be tested offline.
+export async function collectInventoryPages(fetchPage) {
   const instances = [];
-  let nextToken;
   const seenTokens = new Set();
+  let nextToken;
   let totalCount = 0;
   // Bound pagination to avoid an accidental unbounded provider API loop.
   for (let page = 0; page < 20; page += 1) {
-    const request = new $EDSAIC.DescribeAndroidInstancesRequest({
+    const body = await fetchPage({
       maxResults: 100,
       saleMode: "Instance",
       ...(nextToken ? { nextToken } : {})
-    });
-    const response = await client.describeAndroidInstancesWithOptions(request, runtime);
-    const body = response.body || {};
+    }) || {};
     totalCount = body.totalCount ?? totalCount;
     instances.push(...(body.instanceModel || []).map(item => ({
       id: item.androidInstanceId,
@@ -71,11 +68,21 @@ export async function describeCloudPhones() {
       throw error;
     }
   }
+  return { instances, totalCount: totalCount || instances.length };
+}
+
+export async function describeCloudPhones() {
+  const client = createClient();
+  const runtime = new $Util.RuntimeOptions({});
+  const inventory = await collectInventoryPages(async params => {
+    const request = new $EDSAIC.DescribeAndroidInstancesRequest(params);
+    const response = await client.describeAndroidInstancesWithOptions(request, runtime);
+    return response.body || {};
+  });
   return {
     connected: true,
     region,
-    totalCount: totalCount || instances.length,
-    instances
+    ...inventory
   };
 }
 
