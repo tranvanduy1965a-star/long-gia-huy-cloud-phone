@@ -18,14 +18,18 @@ subscription expiry, and admin plan grants. It does **not** create Android VMs y
 - GET /api/me (Bearer token)
 - POST /api/admin/grant-plan { userId, days } (admin only; days 1,2,3,7,30)
 - GET /api/admin/overview (admin only)
-- POST /api/devices (returns an explicit not-configured response until a real provider adapter is added)
+- GET /api/admin/provider/status (admin only; read-only Alibaba Cloud connectivity and instance inventory check)
+- POST /api/devices (still disabled until instance assignment and remote-session delivery are implemented)
 
 ## Important
 - This starter uses SQLite; use persistent disk storage in production.
 - Put the API behind HTTPS and configure rate limiting, backups, monitoring, and account recovery before public launch.
 - The admin allowlist must be set on the server. Never grant admin from frontend/localStorage.
 - Plan grants are manual; no real payment gateway or webhook is connected.
-- Android provisioning, streaming, touch input, Google Play/GMS licensing, and provider secrets are not implemented.
+- The official Alibaba Cloud EDS-AIC Node.js SDK is included. Configure `ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`, and `ALIBABA_CLOUD_REGION` as hosting secrets to enable the admin-only read-only provider check. `ALIBABA_CLOUD_ENDPOINT` is an optional endpoint override.
+- Use a dedicated RAM user with least-privilege permissions. Never use root-account keys or put credentials in GitHub, browser code, screenshots, or chat.
+- The provider adapter currently only lists existing cloud-phone instances. It does not purchase, create, assign, start, or stop devices.
+- Customer provisioning, connection-ticket/session delivery, browser streaming/touch input, Google Play/GMS compatibility tests, payment webhooks, and production hardening are not implemented. Do not advertise the service as live yet.
 - Do not put secrets in frontend code or commit a real `.env`.
 
 
