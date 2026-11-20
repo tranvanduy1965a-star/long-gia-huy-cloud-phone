@@ -1,0 +1,38 @@
+services:
+  cloud-phone-api:
+    build:
+      context: .
+      dockerfile: cloud-api/Dockerfile
+    image: long-gia-huy-cloud-phone:latest
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_PATH: /data/cloudphone.sqlite
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in the deployment environment}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID:-}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:-}
+      ALIBABA_CLOUD_REGION: ${ALIBABA_CLOUD_REGION:-ap-southeast-1}
+      ALIBABA_CLOUD_ENDPOINT: ${ALIBABA_CLOUD_ENDPOINT:-}
+    volumes:
+      - cloudphone-data:/data
+      - ./cloud-sdk:/app/cloud-sdk:ro
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  cloudphone-data:
