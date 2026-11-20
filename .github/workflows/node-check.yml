@@ -24,6 +24,8 @@ jobs:
           node --check cloud-api/server.js
           node --check cloud-api/provider.js
           node --check cloud-api/test/provider.test.js
+          node --check cloud-api/test/server.test.js
+          node --check cloud-api/test/frontend-syntax.test.js
       - name: Validate package manifest
         run: node -e "JSON.parse(require('node:fs').readFileSync('cloud-api/package.json', 'utf8'))"
       - name: Run provider safety tests
