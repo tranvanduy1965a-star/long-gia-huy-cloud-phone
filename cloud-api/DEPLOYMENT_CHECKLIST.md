@@ -43,7 +43,8 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 - Customer registers and signs in.
 - Admin grants one of the 1, 2, 3, 7, or 30 day plans and assigns an already-purchased instance.
 - Customer presses Connect. The API checks the subscription expiry and assignment, then calls `BatchGetAcpConnectionTicket` with the customer's stable internal user ID.
-- The browser passes the one-time ticket and instance identifiers to `Wuying.WebSDK.createSession('appstream', ...)`, then starts the session.
+- The provider ticket response must include both `appInstanceId` (the `ai-...` runtime instance ID) and `persistentAppInstanceId` (the persistent app resource ID). The browser passes the ticket as `userInfo.ticket`, sets `appInfo.appId` to `persistentAppInstanceId`, sets `appInfo.appInstanceId` to `appInstanceId`, includes `regionId`, then starts `Wuying.WebSDK.createSession('appstream', ...)`.
+- After the SDK fires `onConnected`, the client calls `session.setClipboardEnabled(true)`. This enables the SDK clipboard channel; actual copy/paste behavior still needs verification against a provisioned cloud phone and the vendor SDK assets.
 - The ticket is returned only to the authenticated customer and is never stored in the database.
 
 ## 6. Important launch checks
