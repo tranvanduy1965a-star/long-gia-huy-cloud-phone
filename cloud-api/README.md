@@ -27,3 +27,16 @@ subscription expiry, and admin plan grants. It does **not** create Android VMs y
 - Plan grants are manual; no real payment gateway or webhook is connected.
 - Android provisioning, streaming, touch input, Google Play/GMS licensing, and provider secrets are not implemented.
 - Do not put secrets in frontend code or commit a real `.env`.
+
+
+## Serve the website and API together
+Deploy the repository with the service working directory set to `cloud-api` and build command `npm install`, start command `npm start`. The API serves the repository-root `index.html` at `/`, so browser requests to `/api/*` use the same origin. Use a host with a persistent disk and mount it where `DB_PATH` points (for example `./cloudphone.sqlite`); otherwise SQLite data may be lost on redeploy/restart.
+
+## First admin bootstrap
+1. Open the deployed site and register your own account.
+2. Copy the account ID shown after login (or from the account panel).
+3. In the hosting service's environment settings, set `ADMIN_USER_IDS` to that exact ID, then redeploy/restart.
+4. Log out and log in again. The server will now identify that account as admin.
+Never put admin IDs, secrets, or provider credentials in frontend JavaScript.
+
+The site is not live until this API is deployed with its environment variables and persistent storage. GitHub Pages alone cannot run this Node API.
