@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_expiry ON subscriptions(user_id, status, expires_at DESC);
 CREATE INDEX IF NOT EXISTS idx_devices_user_created ON devices(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_devices_provider_instance ON devices(provider_instance_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_unique_provider_instance ON devices(provider_instance_id) WHERE provider_instance_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_actor ON admin_audit_log(actor_user_id, created_at DESC);
 `);
@@ -178,15 +179,20 @@ app.post("/api/admin/assign-device", auth, async (req,res) => {
   const occupied = db.prepare("SELECT user_id FROM devices WHERE provider_instance_id=? AND user_id<>?").get(instanceId,userId);
   if (occupied) return res.status(409).json({ error:"Máy này đang được gán cho tài khoản khác." });
   const existing = db.prepare("SELECT id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(userId);
-  if (existing) {
-    db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id);
+  try {
+    if (existing) {
+      db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id);
+      writeAudit(req.user.id, "assign_device", userId, { instanceId });
+      return res.json({ assigned:true,userId,instanceId });
+    }
+    const id = crypto.randomUUID();
+    db.prepare("INSERT INTO devices(id,user_id,provider,provider_instance_id,status,created_at) VALUES(?,?,?,?,?,?)").run(id,userId,"alibaba-cloud",instanceId,"assigned",now());
     writeAudit(req.user.id, "assign_device", userId, { instanceId });
-    return res.json({ assigned:true,userId,instanceId });
+    res.status(201).json({ assigned:true,userId,instanceId });
+  } catch (error) {
+    if (error?.code === "SQLITE_CONSTRAINT_UNIQUE") return res.status(409).json({ error:"Máy này vừa được gán cho tài khoản khác." });
+    throw error;
   }
-  const id = crypto.randomUUID();
-  db.prepare("INSERT INTO devices(id,user_id,provider,provider_instance_id,status,created_at) VALUES(?,?,?,?,?,?)").run(id,userId,"alibaba-cloud",instanceId,"assigned",now());
-  writeAudit(req.user.id, "assign_device", userId, { instanceId });
-  res.status(201).json({ assigned:true,userId,instanceId });
 });
 
 app.post("/api/devices/session", auth, ticketLimiter, async (req,res) => {
