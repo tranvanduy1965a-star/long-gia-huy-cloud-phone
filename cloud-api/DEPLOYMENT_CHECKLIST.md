@@ -10,6 +10,7 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 - Start: `npm start`.
 - Attach persistent storage and set `DB_PATH` to a file on that disk.
 - Serve over HTTPS.
+- The API includes baseline in-memory rate limits for general API traffic, authentication, and ticket requests. Use a shared Redis-compatible rate-limit store before scaling to multiple replicas.
 - Set `SESSION_SECRET` to a cryptographically random value of at least 32 characters.
 - Initially leave `ADMIN_USER_IDS` empty. Register the owner's account, copy the account ID, set `ADMIN_USER_IDS` to that exact ID in hosting secrets, then restart and sign in again.
 
@@ -51,7 +52,7 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 - Confirm the provider's streaming mode and ticket rules. Instance Edition/preemptive mode may only issue tickets for the same EndUserId; this implementation uses the app's stable user UUID.
 - Test the actual browser session on Android Chrome, desktop Chrome, and Firefox.
 - Verify that the purchased Android image includes the needed Google services and that TikTok, YouTube, Play Store, audio/video decoding, and touch input work. Do not promise these until tested.
-- Add payment gateway/webhooks, rate limits, CSRF/origin policy, audit logs, monitoring, backups, account recovery, concurrency limits, and expiry cleanup before public rental launch.
+- Add payment gateway/webhooks, a shared rate-limit store for multi-replica deployments, explicit origin policy, audit logs, monitoring, backups, account recovery, concurrency limits, and expiry cleanup before public rental launch.
 - Define whether customer data persists or is wiped between rentals. Do not recycle an instance between customers without an approved data-cleaning process.
 - The app currently does not create, purchase, release, or automatically scale cloud phone resources. It only lists existing instances, assigns an existing instance, and requests connection tickets.
 
