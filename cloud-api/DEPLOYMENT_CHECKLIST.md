@@ -37,6 +37,7 @@ This repository now includes the account API, an Alibaba Cloud EDS-AIC SDK adapt
 - Follow the SDK license and distribution terms. Do not copy the vendor SDK into this public repository or redistribute it without Alibaba Cloud's permission.
 - In the deployed web app's static asset root, create `/cloud-sdk/` and place the official `WuyingWebSDK.js` there. Preserve the vendor's required `sdk/ASP/` resource directory and relative paths.
 - The website loads `/cloud-sdk/WuyingWebSDK.js` and expects `window.Wuying.WebSDK` to be available.
+- The account page includes a system health panel. It refreshes when manually requested, when the browser tab becomes visible, and every 30 seconds while visible. The panel can check `/api/health`; signed-in admins can also run the read-only provider inventory check. A successful API health response or configured AccessKey does not prove that a cloud phone instance is running or that a Web SDK session can connect.
 
 ## 5. Customer connection flow
 
