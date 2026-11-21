@@ -40,8 +40,8 @@ body{background:#f3f4f6!important;color:#202127!important;font-family:system-ui,
 .cloud-expiry{color:#397b48;font-weight:700;font-size:14px;border:0;background:transparent}
 .cloud-page{display:none;min-height:calc(100dvh - 220px)}
 .cloud-page.active{display:block}
-.cloud-device-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:14px;padding-top:4px}
-.cloud-add{height:clamp(190px,38vw,280px);max-height:280px;width:100%;min-width:0;border:1.5px solid #d8dbe0;border-radius:19px;background:#fff;color:#85878d;font-size:64px;font-weight:300;display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 2px #00004}
+.cloud-device-grid{display:grid;grid-template-columns:1fr;gap:14px;padding-top:4px}
+.cloud-add{height:clamp(320px,68vw,520px);max-height:520px;width:100%;min-width:0;border:1.5px solid #d8dbe0;border-radius:19px;background:#fff;color:#85878d;font-size:92px;font-weight:300;display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 2px #00004}
 .cloud-add:active{background:#f8fafb;transform:scale(.99)}
 .cloud-empty-note{color:#8c9098;font-size:13px;margin-top:16px}
 .cloud-bottom{position:fixed;z-index:20;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(92vw,680px);height:88px;border-radius:48px;background:#ffffffed;box-shadow:0 5px 22px #17233a12;border:1px solid #eceef1;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding:7px;backdrop-filter:blur(14px)}
@@ -310,17 +310,6 @@ document.getElementById("deviceFilter").addEventListener("click",()=>showCloudTo
 document.getElementById("layoutFilter").addEventListener("click",()=>showCloudToast("Chế độ lưới 3×3 được chọn."));
 document.getElementById("tierFilter").addEventListener("click",()=>showCloudToast("Gói Pro chưa được kết nối với hệ thống thanh toán."));
 
-// External provider handoff: open the authorized VSPhone panel for rented-device clicks.
+// External provider handoff: only the add-device button navigates. Existing UI controls remain untouched.
 const VS_PHONE_PANEL_URL="https://cloud.turbolite.xyz/vsphone/panel/";
-function handoffToVSPhone(event){
-  const card=event.target.closest("[data-home-device], [data-connect-device]");
-  if(!card)return;
-  event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-  showCloudToast("Mở bảng phiên Cloud Phone của nhà cung cấp...");
-  window.location.href=VS_PHONE_PANEL_URL;
-}
-document.getElementById("homeDeviceGrid").addEventListener("click",handoffToVSPhone,true);
-document.getElementById("deviceList").addEventListener("click",handoffToVSPhone,true);
-document.getElementById("connectPhone").addEventListener("click",event=>{event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();window.location.href=VS_PHONE_PANEL_URL},true);
-
 refreshSystemStatus();document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshSystemStatus()});setInterval(()=>{if(!document.hidden)refreshSystemStatus()},30000);if(token)refreshMe().then(checkDevice).then(refreshSystemStatus).catch(e=>{token="";sessionStorage.removeItem("lgh_token");status(e.message);refreshSystemStatus()});</script></body></html>
