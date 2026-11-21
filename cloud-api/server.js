@@ -171,8 +171,8 @@ app.post("/api/admin/grant-plan", auth, (req,res) => {
 });
 
 app.get("/api/devices", auth, (req,res) => {
-  const device = db.prepare("SELECT id,provider,provider_instance_id,status,created_at FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(req.user.id);
-  res.json({ device: device || null });
+  const devices = db.prepare("SELECT id,provider,provider_instance_id,status,created_at FROM devices WHERE user_id=? ORDER BY created_at DESC").all(req.user.id);
+  res.json({ devices, device: devices[0] || null });
 });
 
 // Admin assigns an already-purchased instance; this does not create billable resources.
@@ -193,23 +193,15 @@ app.post("/api/admin/assign-device", auth, async (req,res) => {
   }
   const occupied = db.prepare("SELECT user_id FROM devices WHERE provider_instance_id=? AND user_id<>?").get(instanceId,userId);
   if (occupied) return res.status(409).json({ error:"Máy này đang được gán cho tài khoản khác." });
-  const existing = db.prepare("SELECT id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(userId);
   try {
-    if (existing) {
-      db.transaction(() => {
-        db.prepare("UPDATE devices SET provider=?,provider_instance_id=?,status=? WHERE id=?").run("alibaba-cloud",instanceId,"assigned",existing.id);
-        writeAudit(req.user.id, "assign_device", userId, { instanceId });
-      })();
-      return res.json({ assigned:true,userId,instanceId });
-    }
     const id = crypto.randomUUID();
     db.transaction(() => {
       db.prepare("INSERT INTO devices(id,user_id,provider,provider_instance_id,status,created_at) VALUES(?,?,?,?,?,?)").run(id,userId,"alibaba-cloud",instanceId,"assigned",now());
-      writeAudit(req.user.id, "assign_device", userId, { instanceId });
+      writeAudit(req.user.id, "assign_device", userId, { instanceId, deviceId:id });
     })();
-    res.status(201).json({ assigned:true,userId,instanceId });
+    res.status(201).json({ assigned:true,userId,instanceId,deviceId:id });
   } catch (error) {
-    if (error?.code === "SQLITE_CONSTRAINT_UNIQUE") return res.status(409).json({ error:"Máy này vừa được gán cho tài khoản khác." });
+    if (error?.code === "SQLITE_CONSTRAINT_UNIQUE") return res.status(409).json({ error:"Máy này đã được gán cho một tài khoản. Mỗi máy chỉ được gán một lần." });
     throw error;
   }
 });
@@ -218,8 +210,11 @@ app.post("/api/devices/session", auth, ticketLimiter, async (req,res) => {
   const admin = isAdmin(req.user);
   const sub = db.prepare("SELECT expires_at FROM subscriptions WHERE user_id=? AND status='active' ORDER BY expires_at DESC LIMIT 1").get(req.user.id);
   if (!admin && (!sub || Date.parse(sub.expires_at) <= Date.now())) return res.status(402).json({ error:"Gói thuê đã hết hạn hoặc chưa được kích hoạt." });
-  const device = db.prepare("SELECT provider_instance_id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(req.user.id);
-  if (!device?.provider_instance_id) return res.status(404).json({ error:"Tài khoản chưa được gán máy Android Cloud." });
+  const requestedDeviceId = String(req.body?.deviceId || "").trim();
+  const device = requestedDeviceId
+    ? db.prepare("SELECT id,provider_instance_id FROM devices WHERE id=? AND user_id=?").get(requestedDeviceId, req.user.id)
+    : db.prepare("SELECT id,provider_instance_id FROM devices WHERE user_id=? ORDER BY created_at DESC LIMIT 1").get(req.user.id);
+  if (!device?.provider_instance_id) return res.status(404).json({ error:"Không tìm thấy máy Android Cloud được chọn trong tài khoản." });
   if (!providerConfigured()) return res.status(503).json({ error:"Máy chủ chưa cấu hình Alibaba Cloud.", code:"PROVIDER_NOT_CONFIGURED" });
   try {
     const ticket = await getConnectionTicket(device.provider_instance_id, req.user.id);
