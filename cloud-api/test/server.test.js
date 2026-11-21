@@ -238,6 +238,23 @@ test("account, session, admin and rental API flows", async t => {
       });
       assert.equal(invalidPlan.status, 400);
 
+      const deviceList = await request("/api/devices", { token });
+      assert.equal(deviceList.status, 200);
+      assert.deepEqual(deviceList.data.devices, []);
+      assert.equal(deviceList.data.device, null);
+      assert.match(deviceList.cacheControl || "", /no-store/i);
+
+      // A requested device ID must belong to the signed-in user. This check
+      // happens before provider credentials are needed, so it is testable
+      // without provisioning a billable cloud instance.
+      const foreignOrMissingDevice = await request("/api/devices/session", {
+        method: "POST",
+        token,
+        body: { deviceId: "not-owned-device-id" }
+      });
+      assert.equal(foreignOrMissingDevice.status, 404);
+      assert.match(foreignOrMissingDevice.data.error, /Không tìm thấy máy/);
+
       const invalidDevice = await request("/api/admin/assign-device", {
         method: "POST",
         token,
