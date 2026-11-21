@@ -20,7 +20,112 @@ input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:
 body.fullscreen-fallback header,body.fullscreen-fallback footer{display:none!important}
 body.fullscreen-fallback main{position:fixed;inset:0;z-index:99998;overflow:auto;width:100%;max-width:none;margin:0;padding:16px;background:var(--bg)}
 body.fullscreen-fallback .exit-fab{z-index:99999}
-[hidden]{display:none!important}</style></head><body>
+[hidden]{display:none!important}
+/* Cloud Phone mobile home inspired by the supplied screenshots */
+:root{color-scheme:light}
+body{background:#f3f4f6!important;color:#202127!important;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#cloudApp{min-height:100dvh;padding:env(safe-area-inset-top) 18px calc(108px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto}
+.cloud-top{height:86px;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;overflow:hidden}
+.cloud-filter{border:0;background:transparent;color:#202127;font-size:clamp(13px,3.4vw,18px);font-weight:600;padding:9px 4px}
+.cloud-filter select{width:auto;margin:0;padding:0;border:0;background:transparent;color:inherit;font:inherit}
+.cloud-expiry{color:#397b48;font-weight:700;font-size:14px;border:0;background:transparent}
+.cloud-page{display:none;min-height:calc(100dvh - 220px)}
+.cloud-page.active{display:block}
+.cloud-device-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding-top:4px}
+.cloud-add{height:clamp(230px,58vw,430px);max-height:430px;border:1.5px solid #d8dbe0;border-radius:19px;background:#fff;color:#85878d;font-size:64px;font-weight:300;display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 2px #00004}
+.cloud-add:active{background:#f8fafb;transform:scale(.99)}
+.cloud-empty-note{color:#8c9098;font-size:13px;margin-top:16px}
+.cloud-bottom{position:fixed;z-index:20;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(92vw,680px);height:88px;border-radius:48px;background:#ffffffed;box-shadow:0 5px 22px #17233a12;border:1px solid #eceef1;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding:7px;backdrop-filter:blur(14px)}
+.cloud-tab{border:0;background:transparent;border-radius:40px;height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#414553;font-size:13px;font-weight:600;cursor:pointer}
+.cloud-tab .tab-icon{font-size:27px;line-height:30px}
+.cloud-tab.active{background:#e1eee4;color:#347a43}
+.cloud-tab:active{transform:scale(.97)}
+.cloud-card{background:#fff;border:1px solid #e0e2e6;border-radius:19px;padding:18px;margin:14px 0;color:#24262b}
+.cloud-title{font-size:22px;font-weight:750;margin:18px 0 8px}
+.cloud-muted{color:#777c85;line-height:1.5}
+.cloud-primary{border:0;background:#347f3e;color:white;border-radius:40px;padding:16px 24px;font-size:16px;font-weight:700;width:100%;margin-top:16px}
+.cloud-option{border:1px solid #dfe2e7;background:#fff;border-radius:14px;padding:14px;color:#4a4d55;text-align:left;font-size:15px}
+.cloud-option.selected{border:2px solid #367c45;background:#e5eee7;color:#347a43;font-weight:700}
+.cloud-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.cloud-options.regions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cloud-plan{border:1px solid #dfe2e7;background:#fff;border-radius:17px;padding:17px;margin-top:12px}
+.cloud-plan.selected{border:2px solid #367c45;background:#e8f0e9}
+.cloud-plan b{font-size:18px}
+.cloud-chat-wrap{min-height:calc(100dvh - 280px);display:flex;flex-direction:column;justify-content:center;text-align:center}
+.cloud-chat-wrap input{background:#f5f5f5;border:1px solid #ddd;color:#222;border-radius:14px;padding:18px;font-size:18px;margin-top:28px}
+.cloud-black-btn{background:#050505;color:#fff;border:0;border-radius:14px;padding:18px;font-weight:700;font-size:17px;margin-top:10px}
+.cloud-toast{position:fixed;z-index:40;left:50%;bottom:120px;transform:translateX(-50%);background:#202329;color:white;padding:12px 17px;border-radius:14px;max-width:90vw;font-size:14px;box-shadow:0 8px 24px #0003}
+#legacyConsole{background:#07111f;color:#eef7ff;min-height:100vh}
+#legacyConsole header{display:none}
+#legacyConsole main{padding-top:18px}
+#legacyBack{position:sticky;top:8px;z-index:100;border:1px solid #29445e;background:#102033;color:#9dffc7;padding:10px 14px;border-radius:12px;margin:10px 16px}
+@media(max-width:420px){.cloud-top{gap:2px}.cloud-filter{font-size:12px}.cloud-expiry{font-size:12px}.cloud-tab{font-size:11px}.cloud-bottom{height:82px}.cloud-tab{height:68px}.cloud-device-grid{gap:10px}}
+</style></head><body>
+<div id="cloudApp">
+  <div class="cloud-top">
+    <button class="cloud-filter" type="button" id="deviceFilter">Tất cả thiết bị ▼</button>
+    <button class="cloud-filter" type="button" id="layoutFilter">Chế độ 3x3 ▼</button>
+    <button class="cloud-filter" type="button" id="tierFilter">Pro ▼</button>
+    <button class="cloud-expiry" type="button" id="renewBtn">Gia hạn</button>
+  </div>
+  <section class="cloud-page active" id="cloudDevicesPage">
+    <div class="cloud-device-grid">
+      <button class="cloud-add" id="addCloudDevice" aria-label="Thêm máy ảo">+</button>
+    </div>
+    <p class="cloud-empty-note">Chưa có máy ảo nào được thêm vào danh sách.</p>
+  </section>
+  <section class="cloud-page" id="cloudRewardsPage">
+    <div class="cloud-card" style="min-height:58vh;display:flex;align-items:center;justify-content:center;text-align:center;background:linear-gradient(150deg,#fff,#f4f5f7)">
+      <div><div style="font-size:88px">🎁</div><div class="cloud-title">Phần thưởng</div><p class="cloud-muted">Khu vực phần thưởng của Cloud Phone.</p><p class="cloud-muted">Chưa có phần thưởng nào được mở.</p></div>
+    </div>
+  </section>
+  <section class="cloud-page" id="cloudExplorePage">
+    <div class="cloud-chat-wrap">
+      <h1 style="font-size:30px;margin:0">Chat System &lt;&gt; V2</h1>
+      <p class="cloud-muted">what you name? to start chat 67</p>
+      <input id="chatName" placeholder="what you name" maxlength="32">
+      <button class="cloud-black-btn" id="joinChat">Join chat</button>
+      <p class="cloud-muted" id="chatHint" style="font-size:13px"></p>
+    </div>
+  </section>
+  <section class="cloud-page" id="cloudBuyPage">
+    <div class="cloud-title">Chọn hệ thống</div>
+    <div class="cloud-options" id="osChoices">
+      <button class="cloud-option selected" data-os="Android 10">Android 10</button><button class="cloud-option" data-os="Android 13">Android 13</button><button class="cloud-option" data-os="Android 14">Android 14</button><button class="cloud-option" data-os="Android 15">Android 15</button>
+    </div>
+    <div class="cloud-title" style="font-size:20px;margin-top:30px">Chọn Quốc gia/Vùng</div>
+    <div class="cloud-options regions" id="regionChoices"><button class="cloud-option selected" data-region="Hong Kong">Hồng Kông</button><button class="cloud-option" data-region="Singapore">Singapore</button></div>
+    <div class="cloud-title" style="font-size:20px;margin-top:30px">Vui lòng chọn gói:</div>
+    <div class="cloud-plan" data-plan="buff"><b>Unlimited Cloud Buff +6H</b><p class="cloud-muted">Giá và điều kiện: chưa kết nối nhà cung cấp</p></div>
+    <div class="cloud-plan" data-plan="unlock"><b>Unlock Unlimited Cloud</b><p class="cloud-muted">Giá và điều kiện: chưa kết nối nhà cung cấp</p></div>
+    <div class="cloud-plan selected" data-plan="unlimited"><b>Vô hạn thời gian</b><p class="cloud-muted">Chưa có giá xác thực</p></div>
+    <button class="cloud-primary" id="createCloudBtn">Tạo Máy Cloud</button>
+    <p class="cloud-muted" style="font-size:12px">Đây hiện là giao diện lựa chọn. Nút này chưa mua hoặc khởi tạo máy chủ thật.</p>
+  </section>
+  <section class="cloud-page" id="cloudMinePage">
+    <div class="cloud-card" style="margin-top:16px">
+      <div style="display:flex;align-items:center;gap:14px"><div style="width:64px;height:64px;border-radius:50%;background:#dcebe0;display:grid;place-items:center;font-size:32px">☁️</div><div><b style="font-size:20px">LONG GIA HUY CLOUD</b><div class="cloud-muted">Tài khoản Cloud Phone</div></div></div>
+      <div class="cloud-options" style="margin-top:24px">
+        <button class="cloud-option" id="openConsole">🧰<br>Bảng quản lý</button>
+        <button class="cloud-option" id="openCloudBuy">🛒<br>Mua máy</button>
+        <button class="cloud-option" id="openHelp">🛡️<br>Ủy quyền</button>
+        <button class="cloud-option" id="openDevices">📱<br>Thiết bị</button>
+      </div>
+    </div>
+    <div class="cloud-card"><b>Thông tin dịch vụ</b><p class="cloud-muted">Máy ảo chưa được tạo. Đây là giao diện trang chủ, chưa có Android instance thật được cấp.</p><p class="cloud-muted">Khi có máy chủ và API được kết nối, danh sách thiết bị sẽ xuất hiện ở mục Máy ảo.</p></div>
+  </section>
+</div>
+<nav class="cloud-bottom" aria-label="Điều hướng chính">
+  <button class="cloud-tab active" data-page="cloudDevicesPage"><span class="tab-icon">▣</span><span>Máy ảo</span></button>
+  <button class="cloud-tab" data-page="cloudRewardsPage"><span class="tab-icon">🎁</span><span>Phần thưởng</span></button>
+  <button class="cloud-tab" data-page="cloudExplorePage"><span class="tab-icon">✧</span><span>Khám phá</span></button>
+  <button class="cloud-tab" data-page="cloudBuyPage"><span class="tab-icon">♧</span><span>Mua</span></button>
+  <button class="cloud-tab" data-page="cloudMinePage"><span class="tab-icon">◎</span><span>Của tôi</span></button>
+</nav>
+<div id="cloudToast" class="cloud-toast" hidden></div>
+<div id="legacyConsole" hidden>
+  <button id="legacyBack" type="button">← Quay về trang chủ Cloud Phone</button>
+
 <header><div class="brand"><div class="logo">☁</div><div>LONG GIA HUY<br><small style="font-weight:500;color:#a3b7ca">CLOUD PHONE</small></div></div><div class="pill">CLOUD PHONE · ĐANG TÍCH HỢP</div></header>
 <main><section class="intro"><div class="eyebrow">PERSONAL CLOUD PHONE PORTAL</div><h1>Android Cloud cho Game & Web</h1><p>Mục tiêu: chạy game và trình duyệt trên máy Android đặt tại Cloud, giữ ứng dụng và dữ liệu trên máy chủ, rồi kết nối lại từ điện thoại hoặc máy tính bất cứ lúc nào.</p></section>
 <div class="layout">
@@ -44,6 +149,7 @@ body.fullscreen-fallback .exit-fab{z-index:99999}
 <div class="note">Không dùng tài khoản Google chính, không nhập mật khẩu quan trọng và không cài APK không rõ nguồn. Máy thử có giới hạn thời gian, không phải máy treo game 24/7. Dịch vụ bên ngoài có thể thay đổi hạn mức miễn phí.</div>
 </section>
 <section class="panel" id="account" style="margin-top:16px"><h2>🔐 Tài khoản Cloud Phone</h2><p class="muted" id="authStatus">Đăng nhập hoặc tạo tài khoản để quản lý gói thuê.</p><div class="panel" id="systemStatus" style="margin:12px 0;background:#091827;border:1px solid #29445e"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2 style="margin:0">🛰️ Giám sát hệ thống</h2><button class="btn" id="refreshSystemStatus" type="button">↻ Cập nhật trạng thái</button></div><div class="apps" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:12px"><div class="note" style="margin:0"><b>API máy chủ</b><div id="apiHealthStatus">Đang kiểm tra...</div></div><div class="note" style="margin:0"><b>Alibaba Cloud</b><div id="providerHealthStatus">Chưa xác minh</div></div><div class="note" style="margin:0"><b>Web SDK</b><div id="sdkHealthStatus">Đang kiểm tra...</div></div><div class="note" style="margin:0"><b>Phiên máy ảo</b><div id="sessionHealthStatus">Chưa kết nối</div></div><div class="note" style="margin:0"><b>Clipboard</b><div id="clipboardHealthStatus">Chưa kết nối</div></div></div><div class="muted" id="systemStatusNote" style="font-size:12px;margin-top:10px">Trạng thái Alibaba chỉ được xác minh khi quản trị viên kiểm tra nhà cung cấp. Clipboard hai chiều còn phụ thuộc chính sách của instance.</div><div class="note" style="margin-top:10px;border-color:#8b6b35;color:#ffe0a3">Lưu ý triển khai: nếu anh đang mở bản GitHub Pages (github.io), đây mới là giao diện tĩnh. <a class="btn" href="https://render.com/deploy?repo=https://github.com/tranvanduy1965a-star/long-gia-huy-cloud-phone" target="_blank" rel="noopener">Triển khai máy chủ trên Render</a> Nút này mở trang xem trước Blueprint; anh cần đăng nhập, xem kỹ giá Starter + ổ đĩa lưu trữ và tự xác nhận tạo dịch vụ. Đăng nhập, thuê máy và kết nối Android chỉ hoạt động sau khi API Node.js được triển khai trên máy chủ HTTPS; Web SDK chính thức và máy Android Cloud thật cũng phải được cấu hình. Trang này sẽ không giả báo máy ảo đang chạy khi thiếu các thành phần đó.</div></div><div class="apps" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"><div><label>Tên tài khoản (4–24 ký tự: chữ thường, số, dấu _)</label><input id="username" placeholder="vd: khang_123" autocomplete="username" minlength="4" maxlength="24"></div><div><label>Mật khẩu (10–128 ký tự)</label><input id="password" type="password" placeholder="Ít nhất 10 ký tự" autocomplete="current-password" minlength="10" maxlength="128"></div></div><div class="actions"><button class="btn primary" id="loginBtn">Đăng nhập</button><button class="btn" id="registerBtn">Tạo tài khoản</button><button class="btn" id="logoutBtn" hidden>Đăng xuất</button></div><div id="userPanel" hidden><div class="note" id="subscriptionInfo"></div><div class="note" id="deviceStatus">Chưa kiểm tra máy Android được gán.</div><div class="panel" style="margin:12px 0;background:#091827"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">📱 Máy ảo của tôi</h2><button class="btn" id="refreshDevices" type="button">↻ Làm mới</button></div><div id="deviceList" class="apps" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-top:12px"><div class="muted">Đang tải danh sách máy...</div></div><p class="muted" style="font-size:12px;margin-bottom:0">Mỗi thẻ là một Android instance riêng. Tạo/gán thêm máy cần admin cấp instance thật từ nhà cung cấp.</p></div><div class="actions"><button class="btn primary" id="connectPhone">Kết nối máy mới nhất</button></div><div id="cloudPhoneArea" hidden style="margin-top:14px"><iframe id="cloudPhoneFrame" title="Máy Android trên đám mây" allow="autoplay; fullscreen; clipboard-read; clipboard-write" style="width:100%;height:70vh;min-height:420px;border:1px solid #29445e;border-radius:16px;background:#000"></iframe><div class="panel" style="margin-top:12px;background:#091827"><h2>🎮 Cài và chạy game trong Android ảo</h2><ol style="padding-left:22px;line-height:1.7"><li>Trong màn hình Android phía trên, mở <b>CH Play (Google Play Store)</b>.</li><li>Đăng nhập tài khoản Google của anh ngay trong máy ảo, tìm game rồi nhấn <b>Cài đặt</b>.</li><li>Mở game từ màn hình chính Android và chơi trực tiếp trong khung web này.</li></ol><div class="muted" style="font-size:12px">Khi dùng instance có ổ đĩa lưu trữ bền vững, ứng dụng và dữ liệu được lưu trên máy Android Cloud, không cài vào điện thoại thật. Đóng tab chỉ đóng phiên xem trên trình duyệt; máy ảo có tiếp tục chạy hay không còn phụ thuộc chính sách chạy nền/nhàn rỗi của Alibaba Cloud. Khi mở lại, hãy kết nối vào đúng instance đã gán để tiếp tục. Nếu không thấy CH Play, hãy kiểm tra image Android/GMS và kết nối Internet của máy với nhà cung cấp trước khi cài game. Tương thích game, điều khiển cảm ứng và hiệu năng phải được thử trên máy thật.</div></div><div class="panel" style="margin-top:12px;background:#091827"><h2>📋 Chia sẻ văn bản với máy thật</h2><label for="clipText">Văn bản cần chuyển</label><textarea id="clipText" rows="4" placeholder="Dán hoặc nhập văn bản tại đây..." style="width:100%;padding:12px;border:1px solid #29445e;border-radius:12px;background:#07111f;color:#eef7ff;font:inherit;resize:vertical"></textarea><div class="actions"><button class="btn primary" id="sendClipToCloud">⬆ Sao chép vào máy ảo</button><button class="btn" id="getClipFromCloud">⬇ Lấy văn bản từ máy ảo</button></div><div class="muted" id="clipStatus" style="font-size:12px;margin-top:8px">Cần bật chính sách Clipboard hai chiều trên Alibaba Cloud (Paste to Cloud Phone và Paste Data to Local Device). Sau đó chọn văn bản trong máy ảo rồi sao chép để chuyển về đây.</div></div><button class="btn danger exit-fab" id="disconnectPhone" title="Thoát khỏi máy ảo" aria-label="Thoát khỏi máy ảo">⏻</button></div><div id="adminPanel" hidden><h2>🛡️ Quản trị · Máy chủ Android</h2><div class="actions"><button class="btn" id="providerStatusBtn">Kiểm tra Alibaba Cloud</button></div><label>ID người dùng để gán thêm một máy</label><input id="assignUserId" placeholder="ID người dùng"><label>Alibaba Android Instance ID (mỗi máy một ID)</label><input id="assignInstanceId" placeholder="acp-..."><div class="actions"><button class="btn primary" id="assignDeviceBtn">Gán máy đã mua</button></div><pre id="providerOutput" style="white-space:pre-wrap;overflow-wrap:anywhere;color:#9dffc7;font-size:12px"></pre><h2>🛡️ Quản trị · Cấp gói thuê</h2><label>ID người dùng</label><input id="grantUserId" placeholder="Dán ID người dùng"><label>Thời hạn</label><select id="grantDays"><option value="1">1 ngày</option><option value="2">2 ngày</option><option value="3">3 ngày</option><option value="7">7 ngày</option><option value="30">30 ngày</option></select><div class="actions"><button class="btn primary" id="grantBtn">Cấp gói</button><button class="btn" id="refreshAdmin">Tải danh sách</button></div><pre id="adminOutput" style="white-space:pre-wrap;overflow-wrap:anywhere;color:#9dffc7;font-size:12px"></pre></div></div></section><footer>LONG GIA HUY CLOUD PHONE · Cổng Cloud Phone · Trạng thái máy ảo hiển thị trong tài khoản</footer></main>
+</div>
 <script src="/cloud-sdk/WuyingWebSDK.js" onerror="window.__cloudSdkLoadError=true;const e=document.getElementById('sdkHealthStatus');if(e)e.textContent='Không tải được WuyingWebSDK.js · kiểm tra thư mục /cloud-sdk/'"></script>
 <script>
 function tick(){let d=new Date(),t=d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});document.getElementById('time').textContent=t;document.getElementById('bigtime').textContent=t}tick();setInterval(tick,15000);
@@ -117,4 +223,23 @@ $("getClipFromCloud").onclick=async()=>{const b=$("getClipFromCloud");b.disabled
 $("disconnectPhone").onclick=async()=>{const button=$("disconnectPhone");button.disabled=true;button.textContent="Đang thoát...";try{if(cloudSession)await cloudSession.stop();$("deviceStatus").textContent="Đã thoát khỏi phiên máy ảo. Máy Android Cloud vẫn có thể tiếp tục chạy trên máy chủ."}catch(e){$("deviceStatus").textContent="Đã đóng giao diện máy ảo; trạng thái phiên: "+e.message}finally{cloudSession=null;setCloudConnectionState("disconnected");setHealth("clipboardHealthStatus","Chưa có phiên clipboard");refreshSystemStatus();$("cloudPhoneFrame").src="about:blank";$("cloudPhoneArea").hidden=true;button.disabled=false;button.textContent="⏻ Thoát khỏi máy ảo"}};
 $("providerStatusBtn").onclick=async()=>{try{const d=await api("/api/admin/provider/status");$("providerOutput").textContent=JSON.stringify(d,null,2);setHealth("providerHealthStatus",d.connected?"Đã kết nối · "+(d.instances?.length??0)+" máy trong vùng "+(d.region||""):"Đã cấu hình nhưng chưa kết nối");setHealth("systemStatusNote","Quản trị viên vừa kiểm tra Alibaba Cloud lúc "+new Date().toLocaleTimeString("vi-VN")+".")}catch(e){$("providerOutput").textContent=e.message;setHealth("providerHealthStatus",e.message)}};
 $("assignDeviceBtn").onclick=async()=>{try{$("providerOutput").textContent=JSON.stringify(await api("/api/admin/assign-device",{userId:$("assignUserId").value.trim(),instanceId:$("assignInstanceId").value.trim()}),null,2)}catch(e){$("providerOutput").textContent=e.message}};
+
+function showCloudToast(message){const t=document.getElementById("cloudToast");t.textContent=message;t.hidden=false;clearTimeout(window.__cloudToastTimer);window.__cloudToastTimer=setTimeout(()=>t.hidden=true,3200)}
+function showCloudPage(pageId){document.querySelectorAll(".cloud-page").forEach(p=>p.classList.toggle("active",p.id===pageId));document.querySelectorAll(".cloud-tab").forEach(b=>b.classList.toggle("active",b.dataset.page===pageId));document.getElementById("cloudApp").hidden=false;document.getElementById("legacyConsole").hidden=true;document.querySelector(".cloud-bottom").hidden=false;window.scrollTo({top:0,behavior:"smooth"})}
+document.querySelectorAll(".cloud-tab").forEach(b=>b.addEventListener("click",()=>showCloudPage(b.dataset.page)));
+document.getElementById("addCloudDevice").addEventListener("click",()=>{showCloudPage("cloudBuyPage");showCloudToast("Chưa có máy ảo thật. Đây là bước chọn cấu hình, chưa tạo instance.")});
+document.getElementById("renewBtn").addEventListener("click",()=>{showCloudPage("cloudBuyPage");showCloudToast("Chọn gói để xem giao diện; giá và thanh toán chưa được kết nối.")});
+document.getElementById("createCloudBtn").addEventListener("click",()=>showCloudToast("Chưa kết nối API nhà cung cấp. Chưa có máy ảo nào được tạo hoặc tính phí."));
+document.getElementById("joinChat").addEventListener("click",()=>{const name=document.getElementById("chatName").value.trim();document.getElementById("chatHint").textContent=name?"Đã nhập tên "+name+". Dịch vụ chat chưa được kết nối.":"Vui lòng nhập tên trước."});
+document.querySelectorAll("#osChoices .cloud-option,#regionChoices .cloud-option").forEach(b=>b.addEventListener("click",()=>{b.parentElement.querySelectorAll(".cloud-option").forEach(x=>x.classList.remove("selected"));b.classList.add("selected")}));
+document.querySelectorAll(".cloud-plan").forEach(p=>p.addEventListener("click",()=>{document.querySelectorAll(".cloud-plan").forEach(x=>x.classList.remove("selected"));p.classList.add("selected")}));
+document.getElementById("openCloudBuy").addEventListener("click",()=>showCloudPage("cloudBuyPage"));
+document.getElementById("openDevices").addEventListener("click",()=>showCloudPage("cloudDevicesPage"));
+document.getElementById("openHelp").addEventListener("click",()=>showCloudToast("Chức năng ủy quyền sẽ được bổ sung khi backend được kết nối."));
+document.getElementById("openConsole").addEventListener("click",()=>{document.getElementById("cloudApp").hidden=true;document.querySelector(".cloud-bottom").hidden=true;document.getElementById("legacyConsole").hidden=false;window.scrollTo(0,0)});
+document.getElementById("legacyBack").addEventListener("click",()=>showCloudPage("cloudMinePage"));
+document.getElementById("deviceFilter").addEventListener("click",()=>showCloudToast("Bộ lọc: hiện chưa có thiết bị nào."));
+document.getElementById("layoutFilter").addEventListener("click",()=>showCloudToast("Chế độ lưới 3×3 được chọn."));
+document.getElementById("tierFilter").addEventListener("click",()=>showCloudToast("Gói Pro chưa được kết nối với hệ thống thanh toán."));
+
 refreshSystemStatus();document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshSystemStatus()});setInterval(()=>{if(!document.hidden)refreshSystemStatus()},30000);if(token)refreshMe().then(checkDevice).then(refreshSystemStatus).catch(e=>{token="";sessionStorage.removeItem("lgh_token");status(e.message);refreshSystemStatus()});</script></body></html>
