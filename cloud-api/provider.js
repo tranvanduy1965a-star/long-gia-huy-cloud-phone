@@ -86,6 +86,56 @@ export async function describeCloudPhones() {
   };
 }
 
+/**
+ * Read-only setup catalog for the admin console.
+ * It discovers valid system images and available instance specs in the
+ * configured region. It never creates or purchases cloud resources.
+ */
+export async function describeCloudPhoneCatalog() {
+  const client = createClient();
+  const runtime = new $Util.RuntimeOptions({});
+  const [specResponse, imageResponse] = await Promise.all([
+    client.describeSpecWithOptions(
+      new $EDSAIC.DescribeSpecRequest({
+        bizRegionId: region,
+        saleMode: "Instance",
+        specStatus: "Available",
+        maxResults: 100
+      }),
+      runtime
+    ),
+    client.describeImageListWithOptions(
+      new $EDSAIC.DescribeImageListRequest({
+        imageType: "System",
+        status: "AVAILABLE",
+        maxResults: 100
+      }),
+      runtime
+    )
+  ]);
+
+  const specs = (specResponse.body?.specInfoModel || []).map(item => ({
+    id: item.specId,
+    cpuCores: item.core,
+    memoryGiB: item.memory,
+    systemDiskGiB: item.systemDiskSize,
+    status: item.specStatus
+  })).filter(item => item.id);
+
+  const images = (imageResponse.body?.data || []).filter(item =>
+    item.status === "AVAILABLE" &&
+    Array.isArray(item.imageRegionList) &&
+    item.imageRegionList.includes(region)
+  ).map(item => ({
+    id: item.imageId,
+    name: item.imageName,
+    androidVersion: item.systemType,
+    status: item.status
+  })).filter(item => item.id);
+
+  return { region, specs, images };
+}
+
 // Alibaba may return a TaskId instead of a Ticket. Poll the same operation
 // using InstanceTasks until the ticket is ready, or fail with a bounded timeout.
 export async function getConnectionTicket(instanceId, endUserId) {
