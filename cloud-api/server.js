@@ -148,6 +148,27 @@ app.get("/api/admin/provider/status", auth, async (req,res) => {
   }
 });
 
+// Read-only setup catalog: discover valid specs and Android system images for this region.
+app.get("/api/admin/provider/catalog", auth, async (req,res) => {
+  if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin." });
+  if (!providerConfigured()) return res.status(503).json({
+    configured:false,
+    message:"Chưa cấu hình AccessKey ở phần biến môi trường bảo mật của máy chủ."
+  });
+  try {
+    const { describeCloudPhoneCatalog } = await import("./provider.js");
+    const catalog = await describeCloudPhoneCatalog();
+    res.set("Cache-Control", "no-store, private");
+    res.json({ configured:true, ...catalog });
+  } catch (error) {
+    console.error("Alibaba Cloud catalog check failed:", error?.code || error?.name || "unknown");
+    res.status(502).json({
+      configured:true,
+      error:"Không lấy được danh sách cấu hình Android. Kiểm tra quyền RAM và vùng Alibaba Cloud."
+    });
+  }
+});
+
 // This endpoint is intentionally admin-only and manual until a verified payment webhook is configured.
 app.post("/api/admin/grant-plan", auth, (req,res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error:"Chỉ admin mới được cấp gói." });
