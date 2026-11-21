@@ -310,4 +310,17 @@ document.getElementById("deviceFilter").addEventListener("click",()=>showCloudTo
 document.getElementById("layoutFilter").addEventListener("click",()=>showCloudToast("Chế độ lưới 3×3 được chọn."));
 document.getElementById("tierFilter").addEventListener("click",()=>showCloudToast("Gói Pro chưa được kết nối với hệ thống thanh toán."));
 
+// External provider handoff: open the authorized VSPhone panel for rented-device clicks.
+const VS_PHONE_PANEL_URL="https://cloud.turbolite.xyz/vsphone/panel/";
+function handoffToVSPhone(event){
+  const card=event.target.closest("[data-home-device], [data-connect-device]");
+  if(!card)return;
+  event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+  showCloudToast("Mở bảng phiên Cloud Phone của nhà cung cấp...");
+  window.location.href=VS_PHONE_PANEL_URL;
+}
+document.getElementById("homeDeviceGrid").addEventListener("click",handoffToVSPhone,true);
+document.getElementById("deviceList").addEventListener("click",handoffToVSPhone,true);
+document.getElementById("connectPhone").addEventListener("click",event=>{event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();window.location.href=VS_PHONE_PANEL_URL},true);
+
 refreshSystemStatus();document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshSystemStatus()});setInterval(()=>{if(!document.hidden)refreshSystemStatus()},30000);if(token)refreshMe().then(checkDevice).then(refreshSystemStatus).catch(e=>{token="";sessionStorage.removeItem("lgh_token");status(e.message);refreshSystemStatus()});</script></body></html>
