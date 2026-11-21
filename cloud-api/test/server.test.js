@@ -222,6 +222,10 @@ test("account, session, admin and rental API flows", async t => {
 
       const missingProvider = await request("/api/admin/provider/status", { token: adminToken });
       assert.equal(missingProvider.status, 503);
+
+      const missingCatalog = await request("/api/admin/provider/catalog", { token: adminToken });
+      assert.equal(missingCatalog.status, 503);
+      assert.equal(missingCatalog.data.configured, false);
     });
 
     await t.test("rejects invalid rental grants and unknown devices safely", async () => {
